@@ -547,10 +547,7 @@ function ILChart({
                 fontSize: 12,
                 fontFamily: 'monospace',
               }}
-              formatter={(val, name) => [
-                `$${Number(val ?? 0).toFixed(2)}`,
-                name === 'ilLoss' ? 'IL Loss' : 'Net PnL',
-              ]}
+            />
             <Area
               type="monotone"
               dataKey="ilLoss"
