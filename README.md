@@ -1,89 +1,106 @@
 # Mindor — Intent to Execution
 
-> DeFi LP simulation and execution platform for Solana
+> DeFi LP simulation and execution platform on Solana
 
-**Live:** https://mindor-git-main-techkeyys-projects.vercel.app
+**"Describe your yield goal. See exactly what happens. Execute."**
 
-## What It Does
+## What is Mindor?
 
-Mindor is a simulation-first DeFi platform. You describe 
-your investment goal in plain English. Mindor:
+Mindor is an AI-powered DeFi liquidity provision platform 
+that transforms natural language intent into on-chain LP 
+positions on Solana — with full simulation before any 
+capital moves.
 
-1. **Parses your intent** via Groq AI (Llama 3.3 70B)
-2. **Fetches live pool data** from DefiLlama 
-   (486+ real Solana pools)
-3. **Simulates outcomes** — fee projections, 
-   IL scenarios, best/worst case
-4. **Executes on Solana** — one click, 
-   Phantom wallet, atomic transaction
+## Live Demo
 
-## Tracks
+🌐 **https://mindor-git-main-techkeyys-projects.vercel.app**
 
-- **100xDevs Frontier Track** — Full-stack Solana 
-  application with AI, blockchain execution, 
-  and real DeFi data
-- **LPAgent.io Sidetrack** — LP data intelligence 
-  API integration
+## How It Works
+
+1. **Intent** — Type your goal in plain English
+   ("$2k, low risk, stable yield")
+   
+2. **Simulation** — Mindor fetches live pool data from 
+   DefiLlama, runs IL and fee projections across 
+   all scenarios
+   
+3. **Execution** — Connect Phantom wallet, 
+   review the transaction, confirm on Solana
+
+## Features
+
+- 🧠 **AI Intent Parsing** — Groq (Llama 3.3 70B) 
+  extracts capital, risk profile, duration from 
+  natural language
+- 📊 **Live Pool Data** — 486+ real Solana LP pools 
+  from DefiLlama (updated hourly)
+- 📈 **IL Scenario Analysis** — Bear/base/bull case 
+  impermanent loss visualization
+- ⏱ **Time-based Projections** — 7D/30D/90D/365D 
+  fee earnings
+- 🤖 **Telegram Bot** — @MindorSimBot for 
+  on-the-go simulations
+- 🔌 **Open API** — Any AI agent can call 
+  Mindor's simulation layer
+
+## Public API
+POST /api/mindor/simulate
+
+```json
+{
+  "intent": "$2000, low risk, stable yield",
+  "capitalUSD": 2000,
+  "riskProfile": "low",
+  "durationDays": 30
+}
+```
+
+Returns 3 ranked strategies with full fee projections 
+and IL analysis. No API key required.
 
 ## Tech Stack
 
-- **Frontend:** Next.js 14, Framer Motion, Recharts
-- **AI:** Groq (Llama 3.3 70B) for intent parsing
-- **Data:** DefiLlama Yields API (live, no API key)
-- **Blockchain:** Solana, Phantom Wallet
-- **Bot:** Telegram webhook integration
-- **Deploy:** Vercel
+- **Frontend** — Next.js 14, Framer Motion, Recharts
+- **AI** — Groq API (Llama 3.3 70B)
+- **Data** — DefiLlama Yields API (free, no key)
+- **Blockchain** — Solana, Phantom Wallet
+- **Bot** — Telegram Bot API
+- **Deploy** — Vercel
 
-## Public API
+## Hackathon Tracks
 
-Any AI agent can call Mindor's simulation layer:
-
-```bash
-curl -X POST https://mindor-git-main-techkeyys-projects.vercel.app/api/mindor/simulate \
-  -H "Content-Type: application/json" \
-  -d '{"intent": "2000 dollars low risk stable yield"}'
-```
-
-Returns strategies, fee projections, and IL scenarios 
-for any natural language LP intent.
+- **100xDevs Frontier Track** — Full-stack AI + 
+  Blockchain application
+- **LPAgent.io Sidetrack** — LP data integration 
+  and simulation layer
 
 ## Architecture
-
-```
 User Intent (NL)
-	↓
-  Groq LLM Parser
-	↓
+↓
+Groq LLM Parser
+↓
 DefiLlama Pool Fetch (486+ Solana pools)
-	↓
-Simulation Engine (fee math + IL curves)
-	↓
-Visual Strategy Cards (3 ranked options)
-	↓
-Phantom Wallet → Solana Execution
-	↓
-Position Confirmed
-```
+↓
+Simulation Engine (IL math, fee projections)
+↓
+Strategy Ranking (Conservative/Balanced/Aggressive)
+↓
+Visual Simulation (charts, scenarios, projections)
+↓
+Solana Execution (Phantom wallet, on-chain tx)
 
-## Telegram Bot
-
-Send your intent to @MindorSimBot on Telegram.
-Get strategy simulations back in seconds.
+## Environment Variables
+GROQ_API_KEY=
+TELEGRAM_BOT_TOKEN=
+NEXT_PUBLIC_SOLANA_RPC=
+NEXT_PUBLIC_APP_URL=
+LPAGENT_API_KEY=
 
 ## Local Development
 
 ```bash
 npm install
-cp .env.local.example .env.local
-# Add your API keys
 npm run dev
 ```
 
-## Environment Variables
-
-```
-GROQ_API_KEY=
-TELEGRAM_BOT_TOKEN=
-NEXT_PUBLIC_SOLANA_RPC=
-NEXT_PUBLIC_APP_URL=
-```
+Open http://localhost:3001
