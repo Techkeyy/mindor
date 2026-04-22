@@ -1,36 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Mindor — Intent to Execution
 
-## Getting Started
+> DeFi LP simulation and execution platform for Solana
 
-First, run the development server:
+**Live:** https://mindor-git-main-techkeyys-projects.vercel.app
+
+## What It Does
+
+Mindor is a simulation-first DeFi platform. You describe 
+your investment goal in plain English. Mindor:
+
+1. **Parses your intent** via Groq AI (Llama 3.3 70B)
+2. **Fetches live pool data** from DefiLlama 
+   (486+ real Solana pools)
+3. **Simulates outcomes** — fee projections, 
+   IL scenarios, best/worst case
+4. **Executes on Solana** — one click, 
+   Phantom wallet, atomic transaction
+
+## Tracks
+
+- **100xDevs Frontier Track** — Full-stack Solana 
+  application with AI, blockchain execution, 
+  and real DeFi data
+- **LPAgent.io Sidetrack** — LP data intelligence 
+  API integration
+
+## Tech Stack
+
+- **Frontend:** Next.js 14, Framer Motion, Recharts
+- **AI:** Groq (Llama 3.3 70B) for intent parsing
+- **Data:** DefiLlama Yields API (live, no API key)
+- **Blockchain:** Solana, Phantom Wallet
+- **Bot:** Telegram webhook integration
+- **Deploy:** Vercel
+
+## Public API
+
+Any AI agent can call Mindor's simulation layer:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+curl -X POST https://mindor-git-main-techkeyys-projects.vercel.app/api/mindor/simulate \
+  -H "Content-Type: application/json" \
+  -d '{"intent": "2000 dollars low risk stable yield"}'
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Returns strategies, fee projections, and IL scenarios 
+for any natural language LP intent.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Architecture
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+User Intent (NL)
+	↓
+  Groq LLM Parser
+	↓
+DefiLlama Pool Fetch (486+ Solana pools)
+	↓
+Simulation Engine (fee math + IL curves)
+	↓
+Visual Strategy Cards (3 ranked options)
+	↓
+Phantom Wallet → Solana Execution
+	↓
+Position Confirmed
+```
 
-## Learn More
+## Telegram Bot
 
-To learn more about Next.js, take a look at the following resources:
+Send your intent to @MindorSimBot on Telegram.
+Get strategy simulations back in seconds.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Local Development
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm install
+cp .env.local.example .env.local
+# Add your API keys
+npm run dev
+```
 
-## Deploy on Vercel
+## Environment Variables
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+GROQ_API_KEY=
+TELEGRAM_BOT_TOKEN=
+NEXT_PUBLIC_SOLANA_RPC=
+NEXT_PUBLIC_APP_URL=
+```
