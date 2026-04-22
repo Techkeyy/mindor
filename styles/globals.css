@@ -1,0 +1,50 @@
+:root {
+  --bg-base: #080B12;
+  --bg-surface: #0D1117;
+  --bg-elevated: #131A24;
+  --border-subtle: #1E2A3A;
+  --border-active: #2DD4BF;
+  --accent-primary: #2DD4BF;
+  --accent-secondary: #7C3AED;
+  --accent-danger: #F87171;
+  --accent-warning: #FBBF24;
+  --text-primary: #F0F6FF;
+  --text-secondary: #8B9EC7;
+  --text-muted: #4A5C7A;
+  --glow-teal: 0 0 20px rgba(45, 212, 191, 0.3);
+  --glow-purple: 0 0 20px rgba(124, 58, 237, 0.3);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-inter), Inter, 'JetBrains Mono', monospace;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 0.8;
+}
+
+h1, h2, h3 {
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+button {
+  font-family: var(--font-inter), monospace;
+}
