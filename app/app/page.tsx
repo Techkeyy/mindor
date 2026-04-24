@@ -5,8 +5,15 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, Area, AreaChart
 } from 'recharts'
+import {
+  connectWallet,
+  executeLPPosition,
+  getBalance,
+  type WalletAdapter,
+  type ExecutionResult,
+} from '@/lib/solana'
 
-// ── Types ──────────────────────────────────────────
+// ΓöÇΓöÇ Types ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 type RiskProfile = 'low' | 'medium' | 'high'
 
 type Pool = {
@@ -50,7 +57,7 @@ type Message = {
   timestamp: Date
 }
 
-// ── Constants ──────────────────────────────────────
+// ΓöÇΓöÇ Constants ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 const STRATEGY_COLORS = {
   Conservative: '#2DD4BF',
   Balanced: '#7C3AED',
@@ -63,7 +70,7 @@ const RISK_LABELS = {
   high: { label: 'HIGH RISK', color: '#F87171' },
 }
 
-// ── Helper: generate fee chart data ───────────────
+// ΓöÇΓöÇ Helper: generate fee chart data ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 function makeFeeData(monthlyFee: number, days = 30) {
   let cum = 0
   return Array.from({ length: days }, (_, i) => {
@@ -72,7 +79,7 @@ function makeFeeData(monthlyFee: number, days = 30) {
   })
 }
 
-// ── Sub-components ─────────────────────────────────
+// ΓöÇΓöÇ Sub-components ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
 function EmptyState() {
   return (
@@ -483,7 +490,7 @@ function ILChart({
             color: 'var(--text-secondary)',
           }}>
             {strategy.pool.tokenA}/{strategy.pool.tokenB} 
-            — ${capitalUSD.toLocaleString()} capital
+            ΓÇö ${capitalUSD.toLocaleString()} capital
           </div>
         </div>
         <div style={{
@@ -609,21 +616,65 @@ function ExecutionModal({
   onClose: () => void
   onConfirm: () => void
 }) {
-  const [step, setStep] = useState<'preview' | 'connecting' | 'confirm' | 'success'>('preview')
+    const [step, setStep] = useState<'preview' | 'connecting' | 'confirm' | 'executing' | 'success' | 'error'>('preview')
+  const [walletAddress, setWalletAddress] = useState<string | null>(null)
+  const [walletBalance, setWalletBalance] = useState<number | null>(null)
+  const [txResult, setTxResult] = useState<ExecutionResult | null>(null)
+  const [walletAdapter, setWalletAdapter] = useState<WalletAdapter | null>(null)
+  const [errorMsg, setErrorMsg] = useState<string>('')
   const color = STRATEGY_COLORS[strategy.label]
 
-  const handleConnect = () => {
+  const handleConnect = async () => {
     setStep('connecting')
-    setTimeout(() => setStep('confirm'), 1800)
+    setErrorMsg('')
+
+    const { wallet, address, error } =
+      await connectWallet()
+
+    if (error || !wallet || !address) {
+      setErrorMsg(
+        error ?? 'Failed to connect wallet'
+      )
+      setStep('preview')
+      return
+    }
+
+    const balance = await getBalance(address)
+    setWalletAdapter(wallet)
+    setWalletAddress(address)
+    setWalletBalance(balance)
+    setStep('confirm')
   }
 
-  const handleConfirm = () => {
-    setStep('success')
-    setTimeout(() => {
-      onConfirm()
-      onClose()
-    }, 2500)
+  const handleConfirm = async () => {
+    if (!walletAdapter) return
+    setStep('executing')
+
+    const result = await executeLPPosition(
+      walletAdapter,
+      strategy.pool.address,
+      capitalUSD,
+    )
+
+    setTxResult(result)
+
+    if (result.success) {
+      setStep('success')
+    } else {
+      setErrorMsg(result.error ?? 'Transaction failed')
+      setStep('error')
+    }
   }
+
+  useEffect(() => {
+    if (step !== 'success' || !txResult?.success) return
+
+    const timeout = window.setTimeout(() => {
+      onConfirm()
+    }, 3500)
+
+    return () => window.clearTimeout(timeout)
+  }, [step, txResult, onConfirm])
 
   return (
     <motion.div
@@ -682,7 +733,7 @@ function ExecutionModal({
               color: 'var(--text-secondary)',
               marginBottom: 24,
             }}>
-              {strategy.pool.protocol} · {strategy.label}
+              {strategy.pool.protocol} ┬╖ {strategy.label}
             </div>
 
             <div style={{
@@ -734,7 +785,7 @@ function ExecutionModal({
               marginBottom: 20,
               lineHeight: 1.6,
             }}>
-              ⚠ You will be asked to approve this 
+              ΓÜá You will be asked to approve this 
               transaction in your Phantom wallet. 
               Mindor never holds your private keys.
             </div>
@@ -772,7 +823,7 @@ function ExecutionModal({
                   letterSpacing: '0.05em',
                 }}
               >
-                CONNECT PHANTOM →
+                CONNECT PHANTOM ΓåÆ
               </button>
             </div>
           </>
@@ -822,6 +873,47 @@ function ExecutionModal({
 
         {step === 'confirm' && (
           <>
+            {walletAddress && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                marginBottom: 16,
+                padding: '8px 12px',
+                background: 'var(--bg-base)',
+                borderRadius: 8,
+              }}>
+                <div style={{
+                  width: 8, height: 8,
+                  borderRadius: '50%',
+                  background: '#22C55E',
+                  boxShadow: '0 0 8px #22C55E',
+                  flexShrink: 0,
+                }} />
+                <div style={{
+                  fontSize: 11,
+                  fontFamily: 'monospace',
+                  color: 'var(--text-secondary)',
+                  flex: 1,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {walletAddress.slice(0, 8)}...
+                  {walletAddress.slice(-6)}
+                </div>
+                {walletBalance !== null && (
+                  <div style={{
+                    fontSize: 11,
+                    fontFamily: 'monospace',
+                    color: color,
+                    flexShrink: 0,
+                  }}>
+                    {walletBalance.toFixed(2)} SOL
+                  </div>
+                )}
+              </div>
+            )}
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -894,7 +986,7 @@ function ExecutionModal({
                   letterSpacing: '0.05em',
                 }}
               >
-                CONFIRM IN PHANTOM →
+                CONFIRM IN PHANTOM ΓåÆ
               </button>
             </div>
           </>
@@ -919,7 +1011,7 @@ function ExecutionModal({
                 marginBottom: 16,
               }}
             >
-              ✅
+              Γ£à
             </motion.div>
             <div style={{
               fontSize: 20,
@@ -1089,7 +1181,7 @@ function SimulationResults({
             }}
           >
             EXECUTE {selected.label.toUpperCase()} STRATEGY
-            → {selected.pool.tokenA}/{selected.pool.tokenB}
+            ΓåÆ {selected.pool.tokenA}/{selected.pool.tokenB}
             ON {selected.pool.protocol.toUpperCase()}
           </button>
         </motion.div>
@@ -1114,7 +1206,7 @@ function SimulationResults({
   )
 }
 
-// ── Main Page Component ────────────────────────────
+// ΓöÇΓöÇ Main Page Component ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 export default function AppPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -1192,7 +1284,7 @@ export default function AppPage() {
       const assistantMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        text: `Found ${result.strategies.length} strategies for $${intent.capitalUSD.toLocaleString()} — ${intent.riskProfile} risk. Best match: ${result.strategies[0]?.pool?.tokenA}/${result.strategies[0]?.pool?.tokenB} on ${result.strategies[0]?.pool?.protocol} at ${result.strategies[0]?.pool?.feeApr?.toFixed(1)}% APR.`,
+        text: `Found ${result.strategies.length} strategies for $${intent.capitalUSD.toLocaleString()} ΓÇö ${intent.riskProfile} risk. Best match: ${result.strategies[0]?.pool?.tokenA}/${result.strategies[0]?.pool?.tokenB} on ${result.strategies[0]?.pool?.protocol} at ${result.strategies[0]?.pool?.feeApr?.toFixed(1)}% APR.`,
         timestamp: new Date(),
       }
       setMessages(prev => [...prev, assistantMsg])
@@ -1216,7 +1308,7 @@ export default function AppPage() {
     const execMsg: Message = {
       id: Date.now().toString(),
       role: 'assistant',
-      text: `⚡ Preparing ${strategy.label} execution — ${strategy.pool.tokenA}/${strategy.pool.tokenB} on ${strategy.pool.protocol}. Connect your Phantom wallet to proceed.`,
+      text: `ΓÜí Preparing ${strategy.label} execution ΓÇö ${strategy.pool.tokenA}/${strategy.pool.tokenB} on ${strategy.pool.protocol}. Connect your Phantom wallet to proceed.`,
       timestamp: new Date(),
     }
     setMessages(prev => [...prev, execMsg])
@@ -1255,7 +1347,7 @@ export default function AppPage() {
             fontFamily: 'monospace',
             textDecoration: 'none',
           }}>
-            ← MINDOR
+            ΓåÉ MINDOR
           </a>
           <div style={{
             height: 12, width: 1,
@@ -1479,7 +1571,7 @@ export default function AppPage() {
                   transition: 'background 0.2s',
                 }}
               >
-                →
+                ΓåÆ
               </button>
             </div>
             <div style={{
@@ -1488,7 +1580,7 @@ export default function AppPage() {
               color: 'var(--text-muted)',
               letterSpacing: '0.05em',
             }}>
-              ENTER to send · SHIFT+ENTER for new line
+              ENTER to send ┬╖ SHIFT+ENTER for new line
             </div>
           </div>
         </div>
@@ -1543,3 +1635,5 @@ export default function AppPage() {
     </div>
   )
 }
+
+
