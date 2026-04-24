@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { fetchTopPools } from '@/lib/lpagent'
+import { fetchTopPools } from '@/lib/defillama'
 import { rankStrategies, simulateFees, simulateIL } from '@/lib/simulation'
 
 export async function POST(req: NextRequest) {

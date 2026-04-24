@@ -20,18 +20,16 @@ export type ILSimulation = {
 export type StrategyCard = {
   rank: 1 | 2 | 3
   label: 'Conservative' | 'Balanced' | 'Aggressive'
-  pool: import('./lpagent').Pool
+  pool: import('./defillama').Pool
   projectedMonthlyFees: number
   projectedILRisk: string
   confidenceScore: number
   recommendation: string
 }
 
-import { FALLBACK_POOLS } from './lpagent'
-
 /** Calculate fee projections for a pool and capital amount */
 export function simulateFees(
-  pool: import('./lpagent').Pool,
+  pool: import('./defillama').Pool,
   capitalUSD: number,
   days: number = 30
 ): FeeSimulation {
@@ -52,36 +50,10 @@ export function simulateFees(
 
 /** Simulate impermanent loss across price scenarios */
 export function simulateIL(
-  pool: import('./lpagent').Pool,
+  pool: import('./defillama').Pool,
   capitalUSD: number,
   priceChangePercent: number = -30
 ): ILSimulation {
-  // Stablecoin pairs have near-zero IL
-  const stables = [
-    'USDC', 'USDT', 'DAI', 'FRAX',
-    'CASH', 'USDH', 'USDS', 'SYRUP'
-  ]
-  const tokens = [pool.tokenA, pool.tokenB]
-  const isStablePair = tokens.every(t =>
-    stables.some(s =>
-      t.toUpperCase().includes(s)
-    )
-  )
-
-  if (isStablePair) {
-    return {
-      ilLoss: 0,
-      ilPercent: 0,
-      netPnl: simulateFees(pool, capitalUSD, 30)
-        .monthlyFees,
-      scenarios: {
-        bearCase: 0,
-        baseCase: 0,
-        bullCase: 0,
-      }
-    }
-  }
-
   const calcIL = (changePct: number) => {
     const r = 1 + changePct / 100
     const il = (2 * Math.sqrt(r) / (1 + r)) - 1
@@ -103,127 +75,45 @@ export function simulateIL(
 
 /** Rank pools into 3 strategies: Conservative, Balanced, Aggressive */
 export function rankStrategies(
-  pools: import('./lpagent').Pool[],
+  pools: import('./defillama').Pool[],
   capitalUSD: number
 ): StrategyCard[] {
-  if (!pools || pools.length === 0) {
-    console.error('[rankStrategies] no pools provided')
-    return buildFallbackStrategies(capitalUSD)
-  }
+  const conservative = [...pools]
+    .filter(p => p.ilRisk === 'low')
+    .sort((a, b) => b.netApr - a.netApr)[0] ?? pools[0]
 
-  try {
+  const balanced = [...pools]
+    .filter(p => p.ilRisk === 'medium')
+    .sort((a, b) => b.netApr - a.netApr)[0] ?? pools[1]
 
-    // Conservative: MUST be low ilRisk,
-    // then highest netApr
-    const conservativePools = pools
-      .filter(p => p.ilRisk === 'low')
-      .sort((a, b) => b.netApr - a.netApr)
+  const aggressive = [...pools]
+    .sort((a, b) => b.feeApr - a.feeApr)[0] ?? pools[2]
 
-    // Balanced: medium ilRisk preferred,
-    // fallback to low, never high
-    const balancedPools = pools
-      .filter(p => p.ilRisk === 'medium')
-      .sort((a, b) => b.netApr - a.netApr)
-
-    // Aggressive: highest raw feeApr, any risk
-    const aggressivePools = [...pools]
-      .sort((a, b) => b.feeApr - a.feeApr)
-
-    // Ensure all 3 are different pools
-    const conservative = conservativePools[0]
-      ?? pools.sort((a, b) => a.feeApr - b.feeApr)[0]
-
-    const balanced = balancedPools
-      .find(p => p.address !== conservative.address)
-      ?? pools.find(p =>
-        p.address !== conservative.address
-      )
-      ?? pools[1]
-
-    const aggressive = aggressivePools
-      .find(p =>
-        p.address !== conservative.address &&
-        p.address !== balanced.address
-      )
-      ?? pools[2]
-
-    if (!conservative || !balanced || !aggressive) {
-      console.error('[rankStrategies] incomplete live selection')
-      return buildFallbackStrategies(capitalUSD)
-    }
-
-    const makeCard = (
-      rank: 1 | 2 | 3,
-      label: 'Conservative' | 'Balanced' | 'Aggressive',
-      pool: import('./lpagent').Pool
-    ): StrategyCard => {
-      const fees = simulateFees(pool, capitalUSD, 30)
-      const il = simulateIL(pool, capitalUSD)
-      return {
-        rank, label, pool,
-        projectedMonthlyFees: fees.monthlyFees,
-        projectedILRisk: il.scenarios.bearCase === 0
-          ? '~$0 (stable pair)'
-          : il.scenarios.bearCase < 1
-          ? '<$1 worst case'
-          : `~$${il.scenarios.bearCase.toFixed(0)} worst`,
-        confidenceScore:
-          label === 'Conservative' ? 88 :
-          label === 'Balanced' ? 74 : 61,
-        recommendation:
-          label === 'Conservative'
-            ? `Low-volatility ${pool.tokenA}/${pool.tokenB} on ${pool.protocol} — stable fees, minimal IL exposure.`
-            : label === 'Balanced'
-            ? `${pool.tokenA}/${pool.tokenB} on ${pool.protocol} offers strong fee APR with manageable IL risk.`
-            : `High-yield ${pool.tokenA}/${pool.tokenB} on ${pool.protocol} — maximum fees, accept higher IL risk.`
-      }
-    }
-
-    const strategies = [
-      makeCard(1, 'Conservative', conservative),
-      makeCard(2, 'Balanced', balanced),
-      makeCard(3, 'Aggressive', aggressive),
-    ]
-
-    if (strategies.length !== 3) {
-      console.error('[rankStrategies] invalid strategy count:',
-        strategies.length)
-      return []
-    }
-
-    return strategies
-  } catch (err) {
-    console.error('[rankStrategies] error:', err)
-    return buildFallbackStrategies(capitalUSD)
-  }
-}
-
-function buildFallbackStrategies(capitalUSD: number): StrategyCard[] {
-  return FALLBACK_POOLS.slice(0, 3).map((pool, index) => {
-    const label = index === 0
-      ? 'Conservative'
-      : index === 1
-        ? 'Balanced'
-        : 'Aggressive'
+  const makeCard = (
+    rank: 1 | 2 | 3,
+    label: 'Conservative' | 'Balanced' | 'Aggressive',
+    pool: import('./defillama').Pool
+  ): StrategyCard => {
     const fees = simulateFees(pool, capitalUSD, 30)
     const il = simulateIL(pool, capitalUSD)
     return {
-      rank: (index + 1) as 1 | 2 | 3,
-      label,
-      pool,
+      rank, label, pool,
       projectedMonthlyFees: fees.monthlyFees,
-      projectedILRisk: il.scenarios.bearCase === 0
-        ? '~$0 (stable pair)'
-        : il.scenarios.bearCase < 1
-        ? '<$1 worst case'
-        : `~$${il.scenarios.bearCase.toFixed(0)} worst`,
-      confidenceScore: index === 0 ? 88 : index === 1 ? 74 : 61,
+      projectedILRisk: `~$${il.scenarios.bearCase} worst case`,
+      confidenceScore: label === 'Conservative' ? 88 :
+                       label === 'Balanced' ? 74 : 61,
       recommendation:
         label === 'Conservative'
-          ? `Low-volatility ${pool.tokenA}/${pool.tokenB} on ${pool.protocol} — stable fees, minimal IL exposure.`
+          ? `Low-volatility ${pool.tokenA}/${pool.tokenB} pair on ${pool.protocol} — stable fees, minimal IL exposure.`
           : label === 'Balanced'
           ? `${pool.tokenA}/${pool.tokenB} on ${pool.protocol} offers strong fee APR with manageable IL risk.`
           : `High-yield ${pool.tokenA}/${pool.tokenB} on ${pool.protocol} — maximum fees, accept higher IL risk.`
-    } as StrategyCard
-  })
+    }
+  }
+
+  return [
+    makeCard(1, 'Conservative', conservative),
+    makeCard(2, 'Balanced', balanced),
+    makeCard(3, 'Aggressive', aggressive)
+  ]
 }

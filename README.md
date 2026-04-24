@@ -71,8 +71,7 @@ and IL analysis. No API key required.
 
 - **100xDevs Frontier Track** — Full-stack AI + 
   Blockchain application
-- **LPAgent.io Sidetrack** — LP data integration 
-  and simulation layer
+
 
 ## Architecture
 User Intent (NL)
@@ -94,7 +93,6 @@ GROQ_API_KEY=
 TELEGRAM_BOT_TOKEN=
 NEXT_PUBLIC_SOLANA_RPC=
 NEXT_PUBLIC_APP_URL=
-LPAGENT_API_KEY=
 
 ## Local Development
 
