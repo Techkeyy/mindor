@@ -13,7 +13,7 @@ import {
   type ExecutionResult,
 } from '@/lib/solana'
 
-// ΓöÇΓöÇ Types ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// Types
 type RiskProfile = 'low' | 'medium' | 'high'
 
 type Pool = {
@@ -57,7 +57,7 @@ type Message = {
   timestamp: Date
 }
 
-// ΓöÇΓöÇ Constants ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// Constants
 const STRATEGY_COLORS = {
   Conservative: '#2DD4BF',
   Balanced: '#7C3AED',
@@ -70,7 +70,7 @@ const RISK_LABELS = {
   high: { label: 'HIGH RISK', color: '#F87171' },
 }
 
-// ΓöÇΓöÇ Helper: generate fee chart data ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// Helper: generate fee chart data
 function makeFeeData(monthlyFee: number, days = 30) {
   let cum = 0
   return Array.from({ length: days }, (_, i) => {
@@ -79,7 +79,7 @@ function makeFeeData(monthlyFee: number, days = 30) {
   })
 }
 
-// ΓöÇΓöÇ Sub-components ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// Sub-components
 
 function EmptyState() {
   return (
@@ -490,7 +490,7 @@ function ILChart({
             color: 'var(--text-secondary)',
           }}>
             {strategy.pool.tokenA}/{strategy.pool.tokenB} 
-            ΓÇö ${capitalUSD.toLocaleString()} capital
+            - ${capitalUSD.toLocaleString()} capital
           </div>
         </div>
         <div style={{
@@ -733,7 +733,7 @@ function ExecutionModal({
               color: 'var(--text-secondary)',
               marginBottom: 24,
             }}>
-              {strategy.pool.protocol} ┬╖ {strategy.label}
+              {strategy.pool.protocol} - {strategy.label}
             </div>
 
             <div style={{
@@ -785,7 +785,7 @@ function ExecutionModal({
               marginBottom: 20,
               lineHeight: 1.6,
             }}>
-              ΓÜá You will be asked to approve this 
+              Note: You will be asked to approve this 
               transaction in your Phantom wallet. 
               Mindor never holds your private keys.
             </div>
@@ -823,7 +823,7 @@ function ExecutionModal({
                   letterSpacing: '0.05em',
                 }}
               >
-                CONNECT PHANTOM ΓåÆ
+                CONNECT PHANTOM ›
               </button>
             </div>
           </>
@@ -986,7 +986,7 @@ function ExecutionModal({
                   letterSpacing: '0.05em',
                 }}
               >
-                CONFIRM IN PHANTOM ΓåÆ
+                CONFIRM IN PHANTOM ›
               </button>
             </div>
           </>
@@ -1011,7 +1011,7 @@ function ExecutionModal({
                 marginBottom: 16,
               }}
             >
-              Γ£à
+              OK
             </motion.div>
             <div style={{
               fontSize: 20,
@@ -1181,7 +1181,7 @@ function SimulationResults({
             }}
           >
             EXECUTE {selected.label.toUpperCase()} STRATEGY
-            ΓåÆ {selected.pool.tokenA}/{selected.pool.tokenB}
+            › {selected.pool.tokenA}/{selected.pool.tokenB}
             ON {selected.pool.protocol.toUpperCase()}
           </button>
         </motion.div>
@@ -1206,7 +1206,7 @@ function SimulationResults({
   )
 }
 
-// ΓöÇΓöÇ Main Page Component ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// Main Page Component
 export default function AppPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -1284,7 +1284,7 @@ export default function AppPage() {
       const assistantMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        text: `Found ${result.strategies.length} strategies for $${intent.capitalUSD.toLocaleString()} ΓÇö ${intent.riskProfile} risk. Best match: ${result.strategies[0]?.pool?.tokenA}/${result.strategies[0]?.pool?.tokenB} on ${result.strategies[0]?.pool?.protocol} at ${result.strategies[0]?.pool?.feeApr?.toFixed(1)}% APR.`,
+        text: `Found ${result.strategies.length} strategies for $${intent.capitalUSD.toLocaleString()} - ${intent.riskProfile} risk. Best match: ${result.strategies[0]?.pool?.tokenA}/${result.strategies[0]?.pool?.tokenB} on ${result.strategies[0]?.pool?.protocol} at ${result.strategies[0]?.pool?.feeApr?.toFixed(1)}% APR.`,
         timestamp: new Date(),
       }
       setMessages(prev => [...prev, assistantMsg])
@@ -1308,7 +1308,7 @@ export default function AppPage() {
     const execMsg: Message = {
       id: Date.now().toString(),
       role: 'assistant',
-      text: `ΓÜí Preparing ${strategy.label} execution ΓÇö ${strategy.pool.tokenA}/${strategy.pool.tokenB} on ${strategy.pool.protocol}. Connect your Phantom wallet to proceed.`,
+      text: `Preparing ${strategy.label} execution - ${strategy.pool.tokenA}/${strategy.pool.tokenB} on ${strategy.pool.protocol}. Connect your Phantom wallet to proceed.`,
       timestamp: new Date(),
     }
     setMessages(prev => [...prev, execMsg])
@@ -1347,7 +1347,7 @@ export default function AppPage() {
             fontFamily: 'monospace',
             textDecoration: 'none',
           }}>
-            ΓåÉ MINDOR
+            ‹ MINDOR
           </a>
           <div style={{
             height: 12, width: 1,
@@ -1571,7 +1571,7 @@ export default function AppPage() {
                   transition: 'background 0.2s',
                 }}
               >
-                ΓåÆ
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">`r`n                  <path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z" />`r`n                </svg>
               </button>
             </div>
             <div style={{
@@ -1580,7 +1580,7 @@ export default function AppPage() {
               color: 'var(--text-muted)',
               letterSpacing: '0.05em',
             }}>
-              ENTER to send ┬╖ SHIFT+ENTER for new line
+              ENTER to send - SHIFT+ENTER for new line
             </div>
           </div>
         </div>
