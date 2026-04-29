@@ -58,14 +58,45 @@ export async function connectWallet(): Promise<{
         error: 'Phantom wallet not found. Install from phantom.app'
       }
     }
-    await wallet.connect()
+    // Add 15 second timeout to prevent infinite hang
+    const connectWithTimeout = Promise.race([
+      wallet.connect(),
+      new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error('Connection timed out. Please try again.')),
+          15000
+        )
+      )
+    ])
+
+    await connectWithTimeout
     const address = wallet.publicKey?.toBase58() ?? null
+
+    if (!address) {
+      return {
+        wallet: null,
+        address: null,
+        error: 'Wallet connected but no public key found.'
+      }
+    }
+
     return { wallet, address }
-  } catch (err) {
+  } catch (err: any) {
+    // User rejected or timeout
+    if (
+      err?.message?.includes('User rejected') ||
+      err?.message?.includes('rejected')
+    ) {
+      return {
+        wallet: null,
+        address: null,
+        error: 'Connection cancelled. Click Connect Phantom to try again.'
+      }
+    }
     return {
       wallet: null,
       address: null,
-      error: String(err)
+      error: err?.message ?? String(err)
     }
   }
 }
