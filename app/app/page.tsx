@@ -57,6 +57,18 @@ type Message = {
   timestamp: Date
 }
 
+type Position = {
+  id: string
+  tokenA: string
+  tokenB: string
+  protocol: string
+  feeApr: number
+  signature: string
+  explorerUrl: string
+  timestamp: Date
+  capitalUSD: number
+}
+
 // Constants
 const STRATEGY_COLORS = {
   Conservative: '#2DD4BF',
@@ -157,6 +169,108 @@ function LoadingState() {
         color: 'var(--text-muted)',
       }}>
         ANALYZING INTENT...
+      </div>
+    </motion.div>
+  )
+}
+
+function PositionsPanel({
+  positions,
+}: {
+  positions: Position[]
+}) {
+  if (positions.length === 0) return null
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      style={{
+        margin: '0 24px 16px',
+        background: 'var(--bg-elevated)',
+        border: '1px solid var(--border-subtle)',
+        borderRadius: 12,
+        overflow: 'hidden',
+        flexShrink: 0,
+      }}
+    >
+      <div style={{
+        padding: '10px 16px',
+        borderBottom: '1px solid var(--border-subtle)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      }}>
+        <div style={{
+          fontSize: 10,
+          letterSpacing: '0.2em',
+          color: 'var(--text-muted)',
+          fontFamily: 'monospace',
+        }}>
+          OPEN POSITIONS
+        </div>
+        <div style={{
+          fontSize: 10,
+          color: 'var(--accent-primary)',
+          fontFamily: 'monospace',
+        }}>
+          {positions.length} active
+        </div>
+      </div>
+      <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+        {positions.map(pos => (
+          <div key={pos.id} style={{
+            padding: '10px 16px',
+            borderBottom: '1px solid var(--border-subtle)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+          }}>
+            <div style={{ flex: 1 }}>
+              <div style={{
+                fontSize: 13,
+                fontWeight: 700,
+                color: 'var(--text-primary)',
+                marginBottom: 2,
+              }}>
+                {pos.tokenA}/{pos.tokenB}
+              </div>
+              <div style={{
+                fontSize: 10,
+                color: 'var(--text-muted)',
+                fontFamily: 'monospace',
+              }}>
+                {pos.protocol} · ${pos.capitalUSD.toLocaleString()}
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{
+                fontSize: 14,
+                fontWeight: 700,
+                color: 'var(--accent-primary)',
+                fontFamily: 'monospace',
+              }}>
+                {pos.feeApr.toFixed(1)}% APR
+              </div>
+              <a
+                href={pos.explorerUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  fontSize: 10,
+                  color: 'var(--text-muted)',
+                  fontFamily: 'monospace',
+                  textDecoration: 'none',
+                }}
+              >
+                {pos.signature.slice(0, 8)}...
+                {pos.signature.slice(-4)}
+                <span style={{ color: 'var(--accent-primary)' }}> ↗</span>
+              </a>
+            </div>
+          </div>
+        ))}
       </div>
     </motion.div>
   )
@@ -614,7 +728,7 @@ function ExecutionModal({
   strategy: StrategyCard
   capitalUSD: number
   onClose: () => void
-  onConfirm: () => void
+  onConfirm: (txData?: ExecutionResult) => void
 }) {
     const [step, setStep] = useState<'preview' | 'connecting' | 'confirm' | 'executing' | 'success' | 'error'>('preview')
   const [walletAddress, setWalletAddress] = useState<string | null>(null)
@@ -670,7 +784,7 @@ function ExecutionModal({
     if (step !== 'success' || !txResult?.success) return
 
     const timeout = window.setTimeout(() => {
-      onConfirm()
+      onConfirm(txResult ?? undefined)
     }, 3500)
 
     return () => window.clearTimeout(timeout)
@@ -1007,11 +1121,14 @@ function ExecutionModal({
                 delay: 0.1,
               }}
               style={{
-                fontSize: 48,
                 marginBottom: 16,
               }}
             >
-              OK
+              <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+                <circle cx="28" cy="28" r="28" fill="#22C55E" fillOpacity="0.15" />
+                <circle cx="28" cy="28" r="20" stroke="#22C55E" strokeWidth="2" />
+                <path d="M18 28l7 7 13-13" stroke="#22C55E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </motion.div>
             <div style={{
               fontSize: 20,
@@ -1036,6 +1153,57 @@ function ExecutionModal({
             }}>
               Earning {strategy.pool.feeApr.toFixed(1)}% APR
             </div>
+            {txResult?.signature && (
+              <div style={{ marginTop: 16 }}>
+                <div style={{
+                  fontSize: 10,
+                  color: 'var(--text-muted)',
+                  letterSpacing: '0.2em',
+                  fontFamily: 'monospace',
+                  marginBottom: 6,
+                }}>
+                  TRANSACTION
+                </div>
+                <div style={{
+                  fontSize: 11,
+                  color: 'var(--text-secondary)',
+                  fontFamily: 'monospace',
+                  wordBreak: 'break-all',
+                  background: 'var(--bg-base)',
+                  padding: '8px 12px',
+                  borderRadius: 6,
+                  marginBottom: 8,
+                  border: '1px solid var(--border-subtle)',
+                }}>
+                  {txResult.signature.slice(0, 24)}...
+                  {txResult.signature.slice(-8)}
+                </div>
+                {txResult.explorerUrl && (
+                  <a
+                    href={txResult.explorerUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontSize: 12,
+                      color: 'var(--accent-primary)',
+                      fontFamily: 'monospace',
+                      textDecoration: 'none',
+                      border: '1px solid var(--accent-primary)44',
+                      padding: '6px 14px',
+                      borderRadius: 6,
+                    }}
+                  >
+                    View on Solana Explorer
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" />
+                    </svg>
+                  </a>
+                )}
+              </div>
+            )}
           </motion.div>
         )}
       </motion.div>
@@ -1052,7 +1220,7 @@ function SimulationResults({
   result: SimResult
   selectedStrategy: number
   onSelectStrategy: (i: number) => void
-  onExecute: (strategy: StrategyCard) => void
+  onExecute: (strategy: StrategyCard, txData?: ExecutionResult) => void
 }) {
   const [showModal, setShowModal] = useState(false)
   const selected = result.strategies[selectedStrategy]
@@ -1193,9 +1361,10 @@ function SimulationResults({
             strategy={result.strategies[selectedStrategy]}
             capitalUSD={result.intent.capitalUSD}
             onClose={() => setShowModal(false)}
-            onConfirm={() => {
+            onConfirm={(txData) => {
               onExecute(
-                result.strategies[selectedStrategy]
+                result.strategies[selectedStrategy],
+                txData
               )
               setShowModal(false)
             }}
@@ -1214,6 +1383,7 @@ export default function AppPage() {
   const [simResult, setSimResult] = useState<SimResult | null>(null)
   const [selectedStrategy, setSelectedStrategy] = useState(0)
   const [executing, setExecuting] = useState(false)
+  const [positions, setPositions] = useState<Position[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -1303,8 +1473,27 @@ export default function AppPage() {
     }
   }
 
-  const handleExecute = async (strategy: StrategyCard) => {
+  const handleExecute = async (
+    strategy: StrategyCard,
+    txData?: ExecutionResult
+  ) => {
     setExecuting(true)
+
+    if (txData?.success && txData.signature) {
+      const newPosition: Position = {
+        id: txData.signature,
+        tokenA: strategy.pool.tokenA,
+        tokenB: strategy.pool.tokenB,
+        protocol: strategy.pool.protocol,
+        feeApr: strategy.pool.feeApr,
+        signature: txData.signature,
+        explorerUrl: txData.explorerUrl ?? '',
+        timestamp: new Date(),
+        capitalUSD: simResult?.intent.capitalUSD ?? 0,
+      }
+      setPositions(prev => [newPosition, ...prev])
+    }
+
     const execMsg: Message = {
       id: Date.now().toString(),
       role: 'assistant',
@@ -1590,46 +1779,52 @@ export default function AppPage() {
           flex: 1,
           overflow: 'hidden',
           position: 'relative',
+          display: 'flex',
+          flexDirection: 'column',
         }}>
-          <AnimatePresence mode="wait">
-            {!simResult && !loading && (
-              <motion.div
-                key="empty"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                style={{ height: '100%' }}
-              >
-                <EmptyState />
-              </motion.div>
-            )}
-            {loading && (
-              <motion.div
-                key="loading"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                style={{ height: '100%' }}
-              >
-                <LoadingState />
-              </motion.div>
-            )}
-            {simResult && !loading && (
-              <motion.div
-                key="results"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                style={{ height: '100%' }}
-              >
-                <SimulationResults
-                  result={simResult}
-                  selectedStrategy={selectedStrategy}
-                  onSelectStrategy={setSelectedStrategy}
-                  onExecute={handleExecute}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <PositionsPanel positions={positions} />
+
+          <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+            <AnimatePresence mode="wait">
+              {!simResult && !loading && (
+                <motion.div
+                  key="empty"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  style={{ height: '100%' }}
+                >
+                  <EmptyState />
+                </motion.div>
+              )}
+              {loading && (
+                <motion.div
+                  key="loading"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  style={{ height: '100%' }}
+                >
+                  <LoadingState />
+                </motion.div>
+              )}
+              {simResult && !loading && (
+                <motion.div
+                  key="results"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  style={{ height: '100%' }}
+                >
+                  <SimulationResults
+                    result={simResult}
+                    selectedStrategy={selectedStrategy}
+                    onSelectStrategy={setSelectedStrategy}
+                    onExecute={handleExecute}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </div>
     </div>
