@@ -241,7 +241,7 @@ function PositionsPanel({
                 color: 'var(--text-muted)',
                 fontFamily: 'monospace',
               }}>
-                {pos.protocol} · ${pos.capitalUSD.toLocaleString()}
+                {pos.protocol} ┬╖ ${pos.capitalUSD.toLocaleString()}
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
@@ -266,7 +266,7 @@ function PositionsPanel({
               >
                 {pos.signature.slice(0, 8)}...
                 {pos.signature.slice(-4)}
-                <span style={{ color: 'var(--accent-primary)' }}> ↗</span>
+                <span style={{ color: 'var(--accent-primary)' }}> Γåù</span>
               </a>
             </div>
           </div>
@@ -289,6 +289,7 @@ function StrategyCardComponent({
 }) {
   const color = STRATEGY_COLORS[strategy.label]
   const feeData = makeFeeData(strategy.projectedMonthlyFees)
+  const daily = strategy.projectedMonthlyFees / 30
 
   return (
     <motion.div
@@ -300,69 +301,98 @@ function StrategyCardComponent({
         background: selected
           ? 'var(--bg-elevated)'
           : 'var(--bg-surface)',
-        border: `1px solid ${selected ? color : 'var(--border-subtle)'}`,
+        border: `1px solid ${
+          selected ? color : 'var(--border-subtle)'
+        }`,
         borderRadius: 16,
-        padding: 20,
+        padding: '20px 20px 16px',
         cursor: 'pointer',
         transition: 'all 0.2s ease',
         boxShadow: selected
-          ? `0 0 20px ${color}22`
-          : 'none',
+          ? `0 0 24px ${color}22, 0 4px 24px rgba(0,0,0,0.3)`
+          : '0 2px 8px rgba(0,0,0,0.2)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 14,
       }}
     >
-      {/* Header row */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
-        marginBottom: 12,
       }}>
         <div>
           <div style={{
-            fontSize: 10,
-            letterSpacing: '0.2em',
+            fontSize: 9,
+            letterSpacing: '0.25em',
             color: color,
             fontFamily: 'monospace',
-            marginBottom: 4,
+            marginBottom: 6,
+            fontWeight: 600,
           }}>
             {strategy.label.toUpperCase()}
           </div>
           <div style={{
-            fontSize: 16,
-            fontWeight: 700,
+            fontSize: 20,
+            fontWeight: 800,
             color: 'var(--text-primary)',
+            lineHeight: 1,
+            letterSpacing: '-0.02em',
           }}>
-            {strategy.pool.tokenA}/{strategy.pool.tokenB}
+            {strategy.pool.tokenA}
+            <span style={{
+              color: 'var(--text-muted)',
+              fontWeight: 400,
+            }}>/</span>
+            {strategy.pool.tokenB}
           </div>
           <div style={{
             fontSize: 11,
-            color: 'var(--text-secondary)',
-            marginTop: 2,
+            color: 'var(--text-muted)',
+            marginTop: 3,
+            fontFamily: 'monospace',
+            letterSpacing: '0.05em',
           }}>
             {strategy.pool.protocol}
           </div>
         </div>
+
         <div style={{ textAlign: 'right' }}>
           <div style={{
-            fontSize: 22,
-            fontWeight: 800,
+            fontSize: 32,
+            fontWeight: 900,
             color: color,
             fontFamily: 'monospace',
+            lineHeight: 1,
+            letterSpacing: '-0.03em',
+            textShadow: selected
+              ? `0 0 20px ${color}66`
+              : 'none',
           }}>
-            {strategy.pool.feeApr.toFixed(1)}%
+            {strategy.pool.feeApr.toFixed(1)}
+            <span style={{
+              fontSize: 14,
+              fontWeight: 600,
+              marginLeft: 2,
+            }}>%</span>
           </div>
           <div style={{
-            fontSize: 10,
+            fontSize: 9,
             color: 'var(--text-muted)',
-            letterSpacing: '0.1em',
+            letterSpacing: '0.15em',
+            fontFamily: 'monospace',
+            marginTop: 2,
           }}>
             FEE APR
           </div>
         </div>
       </div>
 
-      {/* Mini fee chart */}
-      <div style={{ height: 48, marginBottom: 12 }}>
+      <div style={{
+        height: 52,
+        marginLeft: -4,
+        marginRight: -4,
+      }}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={feeData}>
             <defs>
@@ -373,7 +403,7 @@ function StrategyCardComponent({
                 <stop
                   offset="5%"
                   stopColor={color}
-                  stopOpacity={0.3}
+                  stopOpacity={0.35}
                 />
                 <stop
                   offset="95%"
@@ -386,7 +416,7 @@ function StrategyCardComponent({
               type="monotone"
               dataKey="fees"
               stroke={color}
-              strokeWidth={1.5}
+              strokeWidth={2}
               fill={`url(#grad-${strategy.rank})`}
               dot={false}
             />
@@ -394,142 +424,121 @@ function StrategyCardComponent({
         </ResponsiveContainer>
       </div>
 
-      {/* Stats: 4 time period projections */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: 8,
-        marginBottom: 12,
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: 6,
       }}>
         {[
-          {
-            label: '7D FEES',
-            value: `$${((strategy.projectedMonthlyFees / 30) * 7).toFixed(2)}`
-          },
-          {
-            label: '30D FEES',
-            value: `$${strategy.projectedMonthlyFees.toFixed(2)}`
-          },
-          {
-            label: '90D FEES',
-            value: `$${(strategy.projectedMonthlyFees * 3).toFixed(2)}`
-          },
-          {
-            label: '365D FEES',
-            value: `$${(strategy.projectedMonthlyFees * 12).toFixed(2)}`
-          },
+          { label: '1D', value: daily },
+          { label: '7D', value: daily * 7 },
+          { label: '30D', value: strategy.projectedMonthlyFees },
+          { label: '1Y', value: strategy.projectedMonthlyFees * 12 },
         ].map(({ label, value }) => (
           <div key={label} style={{
             background: 'var(--bg-base)',
             borderRadius: 8,
-            padding: '8px 10px',
+            padding: '7px 8px',
+            textAlign: 'center',
           }}>
             <div style={{
-              fontSize: 10,
-              color: 'var(--text-secondary)',
-              marginBottom: 2,
+              fontSize: 9,
+              color: 'var(--text-muted)',
               fontFamily: 'monospace',
               letterSpacing: '0.1em',
+              marginBottom: 3,
             }}>
               {label}
             </div>
             <div style={{
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: 700,
               color: 'var(--text-primary)',
               fontFamily: 'monospace',
             }}>
-              {value}
+              ${value < 0.01
+                ? value.toFixed(4)
+                : value < 1
+                ? value.toFixed(3)
+                : value.toFixed(2)}
             </div>
           </div>
         ))}
       </div>
 
-      {/* IL Risk row below the grid */}
       <div style={{
-        background: 'var(--bg-base)',
-        borderRadius: 8,
-        padding: '8px 10px',
-        marginBottom: 12,
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
+        paddingTop: 4,
+        borderTop: '1px solid var(--border-subtle)',
       }}>
-        <div style={{
-          fontSize: 10,
-          color: 'var(--text-secondary)',
-          fontFamily: 'monospace',
-          letterSpacing: '0.1em',
-        }}>
-          IL RISK (worst case)
-        </div>
-        <div style={{
-          fontSize: 13,
-          fontWeight: 700,
-          color: strategy.pool.ilRisk === 'low'
-            ? '#22C55E'
-            : strategy.pool.ilRisk === 'medium'
-            ? '#FBBF24'
-            : '#F87171',
-          fontFamily: 'monospace',
-        }}>
-          {strategy.projectedILRisk}
-        </div>
-      </div>
-
-      {/* Confidence bar */}
-      <div style={{ marginBottom: 10 }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          marginBottom: 4,
-        }}>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <div style={{
+            width: 6,
+            height: 6,
+            borderRadius: '50%',
+            background: strategy.pool.ilRisk === 'low'
+              ? '#22C55E'
+              : strategy.pool.ilRisk === 'medium'
+              ? '#FBBF24'
+              : '#F87171',
+          }} />
           <span style={{
             fontSize: 10,
             color: 'var(--text-secondary)',
-            letterSpacing: '0.1em',
+            fontFamily: 'monospace',
           }}>
-            CONFIDENCE
+            IL: {strategy.projectedILRisk}
           </span>
+        </div>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+        }}>
+          <div style={{
+            width: 48,
+            height: 3,
+            background: 'var(--border-subtle)',
+            borderRadius: 2,
+            overflow: 'hidden',
+          }}>
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{
+                width: `${strategy.confidenceScore}%`,
+              }}
+              transition={{
+                duration: 0.8,
+                delay: delay + 0.3,
+              }}
+              style={{
+                height: '100%',
+                background: color,
+                borderRadius: 2,
+              }}
+            />
+          </div>
           <span style={{
             fontSize: 10,
             color: color,
             fontFamily: 'monospace',
+            fontWeight: 600,
           }}>
             {strategy.confidenceScore}%
           </span>
         </div>
-        <div style={{
-          height: 3,
-          background: 'var(--border-subtle)',
-          borderRadius: 2,
-          overflow: 'hidden',
-        }}>
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{
-              width: `${strategy.confidenceScore}%`
-            }}
-            transition={{ duration: 0.8, delay: delay + 0.3 }}
-            style={{
-              height: '100%',
-              background: color,
-              borderRadius: 2,
-            }}
-          />
-        </div>
       </div>
 
-      {/* Recommendation */}
       <div style={{
-        fontSize: 12,
-        color: 'var(--text-primary)',
-        lineHeight: 1.5,
-        borderTop: '1px solid var(--border-subtle)',
-        paddingTop: 10,
+        fontSize: 11,
+        color: 'var(--text-secondary)',
+        lineHeight: 1.6,
       }}>
         {strategy.recommendation}
       </div>
+
     </motion.div>
   )
 }
@@ -937,7 +946,7 @@ function ExecutionModal({
                   letterSpacing: '0.05em',
                 }}
               >
-                CONNECT PHANTOM ›
+                CONNECT PHANTOM ΓÇ║
               </button>
             </div>
           </>
@@ -1100,7 +1109,7 @@ function ExecutionModal({
                   letterSpacing: '0.05em',
                 }}
               >
-                CONFIRM IN PHANTOM ›
+                CONFIRM IN PHANTOM ΓÇ║
               </button>
             </div>
           </>
@@ -1348,9 +1357,9 @@ function SimulationResults({
               cursor: 'pointer',
             }}
           >
-            EXECUTE {selected.label.toUpperCase()} STRATEGY
-            › {selected.pool.tokenA}/{selected.pool.tokenB}
-            ON {selected.pool.protocol.toUpperCase()}
+            EXECUTE {selected.label.toUpperCase()} —
+            {` ${selected.pool.tokenA}/${selected.pool.tokenB}`}
+            {` · ${selected.pool.protocol}`}
           </button>
         </motion.div>
       )}
@@ -1536,7 +1545,7 @@ export default function AppPage() {
             fontFamily: 'monospace',
             textDecoration: 'none',
           }}>
-            ‹ MINDOR
+            ΓÇ╣ MINDOR
           </a>
           <div style={{
             height: 12, width: 1,
