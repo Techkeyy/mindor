@@ -241,12 +241,12 @@ function PositionsPanel({
                 color: 'var(--text-muted)',
                 fontFamily: 'monospace',
               }}>
-                {pos.protocol} ┬╖ ${pos.capitalUSD.toLocaleString()}
+                {pos.protocol} · ${pos.capitalUSD.toLocaleString()}
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{
-                fontSize: 14,
+                fontSize: 18,
                 fontWeight: 700,
                 color: 'var(--accent-primary)',
                 fontFamily: 'monospace',
@@ -266,7 +266,15 @@ function PositionsPanel({
               >
                 {pos.signature.slice(0, 8)}...
                 {pos.signature.slice(-4)}
-                <span style={{ color: 'var(--accent-primary)' }}> Γåù</span>
+                <svg width="10" height="10"
+                  viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" strokeWidth="2"
+                  style={{ flexShrink: 0 }}>
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0
+                    1-2-2V8a2 2 0 0 1 2-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
               </a>
             </div>
           </div>
@@ -359,7 +367,7 @@ function StrategyCardComponent({
 
         <div style={{ textAlign: 'right' }}>
           <div style={{
-            fontSize: 32,
+            fontSize: 38,
             fontWeight: 900,
             color: color,
             fontFamily: 'monospace',
@@ -371,8 +379,8 @@ function StrategyCardComponent({
           }}>
             {strategy.pool.feeApr.toFixed(1)}
             <span style={{
-              fontSize: 14,
-              fontWeight: 600,
+              fontSize: 18,
+              fontWeight: 700,
               marginLeft: 2,
             }}>%</span>
           </div>
@@ -946,7 +954,7 @@ function ExecutionModal({
                   letterSpacing: '0.05em',
                 }}
               >
-                CONNECT PHANTOM ΓÇ║
+                CONNECT PHANTOM ╬ô├çΓòæ
               </button>
             </div>
           </>
@@ -1109,7 +1117,7 @@ function ExecutionModal({
                   letterSpacing: '0.05em',
                 }}
               >
-                CONFIRM IN PHANTOM ΓÇ║
+                CONFIRM IN PHANTOM ╬ô├çΓòæ
               </button>
             </div>
           </>
@@ -1357,9 +1365,9 @@ function SimulationResults({
               cursor: 'pointer',
             }}
           >
-            EXECUTE {selected.label.toUpperCase()} —
+            EXECUTE {selected.label.toUpperCase()} ΓÇö
             {` ${selected.pool.tokenA}/${selected.pool.tokenB}`}
-            {` · ${selected.pool.protocol}`}
+            {` ┬╖ ${selected.pool.protocol}`}
           </button>
         </motion.div>
       )}
@@ -1545,7 +1553,7 @@ export default function AppPage() {
             fontFamily: 'monospace',
             textDecoration: 'none',
           }}>
-            ΓÇ╣ MINDOR
+            {'<'} MINDOR
           </a>
           <div style={{
             height: 12, width: 1,
