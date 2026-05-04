@@ -11,7 +11,12 @@ Shape:
 }
 
 Rules:
-- capitalUSD: extract dollar amount. Default 1000.
+- capitalUSD: extract dollar amount. Minimum 1000. 
+  If user says less than 1000, use 1000. 
+  If no amount mentioned, use 1000.
+  Examples: '$10' -> 1000, '$500' -> 1000, 
+  '$2000' -> 2000, '$5k' -> 5000, 
+  'ten dollars' -> 1000
 - riskProfile: 
     low = safe/stable/stablecoins/conservative/protect
     high = aggressive/degen/max yield/risky/moon

@@ -9,7 +9,7 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'Mindor — Intent to Execution',
+  title: 'Mindor - Intent to Execution',
   description: 'DeFi LP simulation and execution on Solana',
 }
 

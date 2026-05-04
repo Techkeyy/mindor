@@ -51,7 +51,7 @@ export default function Home() {
             <a key={label} href={href} style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '12px', letterSpacing: '0.08em' }}>{label}</a>
           ))}
         </nav>
-        <a href="/app" style={{ border: '1px solid var(--border-active)', color: 'var(--accent-primary)', borderRadius: '999px', padding: '10px 14px', textDecoration: 'none', fontSize: '12px' }}>Launch App →</a>
+        <a href="/app" style={{ border: '1px solid var(--border-active)', color: 'var(--accent-primary)', borderRadius: '999px', padding: '10px 14px', textDecoration: 'none', fontSize: '12px' }}>Launch App &gt;</a>
       </header>
 
       <main style={{ paddingTop: '56px' }}>
@@ -62,7 +62,7 @@ export default function Home() {
           <div style={{ position: 'absolute', inset: 0, zIndex: 1, background: 'linear-gradient(180deg, rgba(8,11,18,0.55) 0%, rgba(8,11,18,0.8) 100%)' }} />
           <div style={{ position: 'relative', zIndex: 10, minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '96px 24px 64px', textAlign: 'center' }}>
             <div style={{ border: '1px solid var(--border-subtle)', color: 'var(--text-muted)', borderRadius: '999px', padding: '8px 14px', fontSize: '10px', letterSpacing: '0.2em', background: 'rgba(19, 26, 36, 0.72)', marginBottom: '28px' }}>
-              SOLANA × DEFILLAMA × AI
+              SOLANA x DEFILLAMA x AI
             </div>
 
             <motion.h1 {...fadeUp(0)} style={{ fontSize: 'clamp(56px, 10vw, 108px)', lineHeight: 0.92, letterSpacing: '-0.06em', margin: 0, fontWeight: 800 }}>
@@ -93,9 +93,9 @@ export default function Home() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '18px' }}>
             {[
-              { icon: '❓', title: 'Which pool?', body: 'Thousands of options. No clear signal.' },
-              { icon: '📉', title: 'What will happen?', body: 'Impermanent loss is invisible until it isn\'t.' },
-              { icon: '⚙️', title: 'How do I execute?', body: 'Wallets, slippage, ranges — too much friction.' },
+              { icon: '?', title: 'Which pool?', body: 'Thousands of options. No clear signal.' },
+              { icon: '-', title: 'What will happen?', body: 'Impermanent loss is invisible until it is too late.' },
+              { icon: '*', title: 'How do I execute?', body: 'Wallets, slippage, ranges - too much friction.' },
             ].map((item, index) => (
               <motion.div key={item.title} {...fadeUp(index * 0.15)} style={{ ...panelStyle, padding: '24px' }}>
                 <div style={{ fontSize: '28px', marginBottom: '12px' }}>{item.icon}</div>
@@ -109,7 +109,7 @@ export default function Home() {
         <section id="how-it-works" style={{ ...pageWidth, paddingTop: '128px', paddingBottom: '128px', display: 'grid', gridTemplateColumns: '1.05fr 0.95fr', gap: '28px', alignItems: 'start' }}>
           <div>
             <div style={{ color: 'var(--text-muted)', fontSize: '10px', letterSpacing: '0.35em', marginBottom: '18px' }}>THE SOLUTION</div>
-            <h2 style={{ fontSize: 'clamp(34px, 5vw, 58px)', lineHeight: 1.05, margin: 0, marginBottom: '28px' }}>Intent → Simulation → Execution</h2>
+            <h2 style={{ fontSize: 'clamp(34px, 5vw, 58px)', lineHeight: 1.05, margin: 0, marginBottom: '28px' }}>Intent - Simulation - Execution</h2>
 
             <div style={{ display: 'grid', gap: '26px' }}>
               {[
@@ -153,19 +153,19 @@ export default function Home() {
           <div style={{ color: 'var(--text-secondary)', marginBottom: '28px', maxWidth: '640px' }}>Send your intent to @MindorBot. Get strategies back in seconds.</div>
           <div style={{ maxWidth: '760px', margin: '0 auto', display: 'grid', gap: '14px' }}>
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <div style={{ ...panelStyle, maxWidth: '360px', padding: '16px 18px', background: 'var(--accent-primary)', color: 'var(--bg-base)', borderColor: 'var(--accent-primary)' }}>I have $1500, want stable yield</div>
+              <div style={{ ...panelStyle, maxWidth: '360px', padding: '16px 18px', background: 'var(--accent-primary)', color: 'var(--bg-base)', borderColor: 'var(--accent-primary)' }}>I have $5,000, want stable yield</div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
               <div style={{ ...panelStyle, maxWidth: '520px', padding: '16px 18px', background: 'var(--bg-elevated)', color: 'var(--text-primary)' }}>
                 Found 3 strategies for you:
                 <br />
-                ✅ Conservative: USDC/USDT Meteora — 7.9% APR
+                - Conservative: USDC/USDT Meteora - 7.9% APR
                 <br />
-                ⚡ Balanced: SOL/USDC Orca — 19.7% APR
+                - Balanced: SOL/USDC Orca - 19.7% APR
                 <br />
-                🔥 Aggressive: SOL/JTO Meteora — 67.3% APR
+                - Aggressive: SOL/JTO Meteora - 67.3% APR
                 <br />
-                → View full simulation: mindor.xyz/app
+                &gt; View full simulation: mindor.xyz/app
               </div>
             </div>
           </div>
@@ -194,9 +194,9 @@ export default function Home() {
               <a href="#telegram" style={{ color: 'inherit', textDecoration: 'none' }}>Telegram</a>
               <a href="#api" style={{ color: 'inherit', textDecoration: 'none' }}>Docs</a>
             </div>
-            <div style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>Built on Solana × DefiLlama × Claude AI</div>
+            <div style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>Built on Solana x DefiLlama x Claude AI</div>
           </div>
-          <div style={{ ...pageWidth, marginTop: '24px', color: 'var(--text-muted)' }}>Open simulation API — call it from your agent</div>
+          <div style={{ ...pageWidth, marginTop: '24px', color: 'var(--text-muted)' }}>Open simulation API - call it from your agent</div>
         </footer>
       </main>
     </div>

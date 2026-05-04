@@ -241,7 +241,7 @@ function PositionsPanel({
                 color: 'var(--text-muted)',
                 fontFamily: 'monospace',
               }}>
-                {pos.protocol} · ${pos.capitalUSD.toLocaleString()}
+                {pos.protocol} - ${pos.capitalUSD.toLocaleString()}
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
@@ -954,7 +954,7 @@ function ExecutionModal({
                   letterSpacing: '0.05em',
                 }}
               >
-                CONNECT PHANTOM ╬ô├çΓòæ
+                CONNECT PHANTOM &gt;
               </button>
             </div>
           </>
@@ -1117,7 +1117,7 @@ function ExecutionModal({
                   letterSpacing: '0.05em',
                 }}
               >
-                CONFIRM IN PHANTOM ╬ô├çΓòæ
+                CONFIRM IN PHANTOM &gt;
               </button>
             </div>
           </>
@@ -1365,9 +1365,7 @@ function SimulationResults({
               cursor: 'pointer',
             }}
           >
-            EXECUTE {selected.label.toUpperCase()} ΓÇö
-            {` ${selected.pool.tokenA}/${selected.pool.tokenB}`}
-            {` ┬╖ ${selected.pool.protocol}`}
+            EXECUTE {selected.label.toUpperCase()} STRATEGY
           </button>
         </motion.div>
       )}
@@ -1646,7 +1644,7 @@ export default function AppPage() {
                     color: 'var(--border-active)',
                     opacity: 0.6,
                   }}>
-                    &quot;$2k, low risk, stable yield&quot;
+                    &quot;$5k, low risk, stable yield&quot;
                   </span>
                 </div>
               </div>

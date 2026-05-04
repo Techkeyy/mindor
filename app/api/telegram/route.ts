@@ -71,14 +71,14 @@ export async function POST(req: NextRequest) {
     // Handle /start command
     if (text === '/start') {
       await sendMessage(chatId,
-        `👋 <b>Welcome to Mindor, ${firstName}!</b>\n\n` +
+        `<b>Welcome to Mindor, ${firstName}!</b>\n\n` +
         `I simulate DeFi LP strategies before ` +
         `your capital moves.\n\n` +
         `Just tell me your goal. Examples:\n` +
-        `• <i>"$2000, low risk, stable yield"</i>\n` +
-        `• <i>"5k aggressive, max APR"</i>\n` +
-        `• <i>"1000 dollars medium risk"</i>\n\n` +
-        `I'll find the best Solana LP pools for you. ⚡`
+        `- <i>"$2000, low risk, stable yield"</i>\n` +
+        `- <i>"5k aggressive, max APR"</i>\n` +
+        `- <i>"1000 dollars medium risk"</i>\n\n` +
+        `I'll find the best Solana LP pools for you.`
       )
       return NextResponse.json({ ok: true })
     }
@@ -87,16 +87,16 @@ export async function POST(req: NextRequest) {
     if (text === '/help') {
       await sendMessage(chatId,
         `<b>Mindor Bot Commands</b>\n\n` +
-        `/start — Introduction\n` +
-        `/help — Show this message\n\n` +
+        `/start - Introduction\n` +
+        `/help - Show this message\n\n` +
         `<b>How to use:</b>\n` +
         `Just describe your investment goal in ` +
         `plain English and I'll simulate the best ` +
         `LP strategies for you.\n\n` +
         `<b>Example inputs:</b>\n` +
-        `• "$5000 low risk stablecoins"\n` +
-        `• "aggressive yield 10k"\n` +
-        `• "2000 dollars balanced approach"`
+        `- "$5000 low risk stablecoins"\n` +
+        `- "aggressive yield 10k"\n` +
+        `- "2000 dollars balanced approach"`
       )
       return NextResponse.json({ ok: true })
     }
@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
 
     if (!pools || pools.length === 0) {
       await sendMessage(chatId,
-        `⚠️ No live pools found for your criteria.\n` +
+        `No live pools found for your criteria.\n` +
         `Try adjusting your risk preference.`
       )
       return NextResponse.json({ ok: true })
@@ -143,7 +143,7 @@ export async function POST(req: NextRequest) {
 
     if (!strategies || strategies.length === 0) {
       await sendMessage(chatId,
-        `⚠️ Could not generate strategies. ` +
+        `Could not generate strategies. ` +
         `Please try again.`
       )
       return NextResponse.json({ ok: true })
@@ -151,38 +151,38 @@ export async function POST(req: NextRequest) {
 
     // Build response message
     const riskEmoji = {
-      low: '🟢', medium: '🟡', high: '🔴'
+      low: 'low', medium: 'med', high: 'high'
     }[intent.riskProfile]
 
     const lines = [
-      `<b>🧠 Mindor Simulation</b>`,
+      `<b>Mindor Simulation</b>`,
       ``,
       `<b>Intent:</b> ${intent.summary}`,
       `<b>Capital:</b> $${intent.capitalUSD.toLocaleString()}`,
       `<b>Risk:</b> ${riskEmoji} ${intent.riskProfile.toUpperCase()}`,
       ``,
-      `<b>📊 Top 3 Strategies:</b>`,
+      `<b>Top 3 Strategies:</b>`,
       ``,
     ]
 
     strategies.forEach((s, i) => {
-      const emoji = ['✅', '⚡', '🔥'][i]
+      const emoji = ['1.', '2.', '3.'][i]
       lines.push(
         `${emoji} <b>${s.label}</b>: ` +
         `${s.pool.tokenA}/${s.pool.tokenB} ` +
         `on ${s.pool.protocol}\n` +
-        `   └ ${s.pool.feeApr.toFixed(1)}% APR\n` +
-        `   └ 7d: $${((s.projectedMonthlyFees / 30) * 7)
-          .toFixed(2)} · ` +
-        `30d: $${s.projectedMonthlyFees.toFixed(2)} · ` +
+        `   - ${s.pool.feeApr.toFixed(1)}% APR\n` +
+        `   - 7d: $${((s.projectedMonthlyFees / 30) * 7)
+          .toFixed(2)} - ` +
+        `30d: $${s.projectedMonthlyFees.toFixed(2)} - ` +
         `1y: $${(s.projectedMonthlyFees * 12).toFixed(2)}`
       )
     })
 
     lines.push(``)
     lines.push(
-      `🔗 <a href="${BASE_URL}/app">` +
-      `View full simulation →</a>`
+      `<a href="${BASE_URL}/app">` +
+      `View full simulation</a>`
     )
 
     await sendMessage(chatId, lines.join('\n'))

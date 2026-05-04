@@ -104,10 +104,10 @@ export function rankStrategies(
                        label === 'Balanced' ? 74 : 61,
       recommendation:
         label === 'Conservative'
-          ? `Low-volatility ${pool.tokenA}/${pool.tokenB} pair on ${pool.protocol} — stable fees, minimal IL exposure.`
+          ? `Low-volatility ${pool.tokenA}/${pool.tokenB} pair on ${pool.protocol} - stable fees, minimal IL exposure.`
           : label === 'Balanced'
           ? `${pool.tokenA}/${pool.tokenB} on ${pool.protocol} offers strong fee APR with manageable IL risk.`
-          : `High-yield ${pool.tokenA}/${pool.tokenB} on ${pool.protocol} — maximum fees, accept higher IL risk.`
+          : `High-yield ${pool.tokenA}/${pool.tokenB} on ${pool.protocol} - maximum fees, accept higher IL risk.`
     }
   }
 

@@ -103,7 +103,7 @@ const FALLBACK_POOLS: Pool[] = [
   }
 ]
 
-/** Fetch real Solana LP pools from DefiLlama — no API key required */
+/** Fetch real Solana LP pools from DefiLlama - no API key required */
 export async function fetchTopPools(
   riskProfile: RiskProfile
 ): Promise<Pool[]> {
@@ -148,7 +148,7 @@ export async function fetchTopPools(
   }
 }
 
-/** Fetch pool detail — enriches with mock history for now */
+/** Fetch pool detail - enriches with mock history for now */
 export async function fetchPoolDetail(
   poolAddress: string
 ): Promise<PoolDetail> {
