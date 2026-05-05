@@ -12,12 +12,13 @@ import {
 import BN from 'bn.js'
 
 export const connection = new Connection(
-  clusterApiUrl('devnet'),
+  process.env.NEXT_PUBLIC_SOLANA_RPC ??
+    clusterApiUrl('mainnet-beta'),
   { commitment: 'confirmed' }
 )
 
 const KNOWN_POOLS: Record<string, string> = {
-  'SOL-USDC': 'BL9k1nsrBxYtYQMxHy6HdcbLLjHLHShrQvrr2DuWaRXZ',
+  'SOL-USDC': '5rCf1DM8LjKTw4YqhnoLcngyZYeNnQqztScTogYHAS6',
 }
 
 export type WalletAdapter = {
@@ -238,9 +239,7 @@ export async function executeLPPosition(
     return {
       success: true,
       signature: addSig,
-      explorerUrl:
-        `https://explorer.solana.com/tx/${addSig}` +
-        `?cluster=devnet`,
+      explorerUrl: `https://explorer.solana.com/tx/${addSig}`,
       poolAddress: POOL.toBase58(),
       tokenA: 'SOL',
       tokenB: 'USDC',
@@ -289,7 +288,7 @@ async function devnetFallbackTx(
     return {
       success: true,
       signature,
-      explorerUrl: `https://explorer.solana.com/tx/${signature}?cluster=devnet`,
+      explorerUrl: `https://explorer.solana.com/tx/${signature}`,
     }
   } catch (err) {
     return { success: false, error: String(err) }
