@@ -4,6 +4,7 @@ import {
   PublicKey,
   SystemProgram,
   Transaction,
+  Keypair,
   LAMPORTS_PER_SOL,
   clusterApiUrl,
   VersionedTransaction,
@@ -202,9 +203,14 @@ export async function executeLPPosition(
     console.log('[meteora] adding liquidity...')
     console.log('[meteora] range:', minBinId, 'to', maxBinId)
 
+    // Generate a new position keypair for this LP position
+    const positionKeypair = Keypair.generate()
+    console.log('[meteora] position keypair:',
+      positionKeypair.publicKey.toBase58())
+
     // Build add liquidity transaction
     const addLiquidityTx = await dlmmPool.addLiquidityByStrategy({
-      positionPubKey: wallet.publicKey,
+      positionPubKey: positionKeypair.publicKey,
       user: wallet.publicKey,
       totalXAmount: lamports,
       totalYAmount: usdcAmount,
@@ -223,6 +229,9 @@ export async function executeLPPosition(
 
     addLiquidityTx.recentBlockhash = blockhash
     addLiquidityTx.feePayer = wallet.publicKey
+
+    // Position keypair must also sign the transaction
+    addLiquidityTx.partialSign(positionKeypair)
 
     // Sign with Phantom
     const signed = await wallet.signTransaction(addLiquidityTx)
