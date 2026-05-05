@@ -116,6 +116,20 @@ export async function getBalance(
   }
 }
 
+async function getSolPrice(): Promise<number> {
+  try {
+    const res = await fetch(
+      'https://api.coingecko.com/api/v3/simple/price' +
+      '?ids=solana&vs_currencies=usd',
+      { cache: 'no-store' }
+    )
+    const data = await res.json()
+    return data?.solana?.usd ?? 150
+  } catch {
+    return 150
+  }
+}
+
 async function findMeteoraPool(
   tokenAMint: string,
   tokenBMint: string
@@ -146,7 +160,7 @@ export async function executeLPPosition(
     const DLMM = (await import('@meteora-ag/dlmm')).default
 
     const POOL = new PublicKey(
-      'BL9k1nsrBxYtYQMxHy6HdcbLLjHLHShrQvrr2DuWaRXZ'
+      '5rCf1DM8LjKTw4YqhnoLcngyZYeNnQqztScTogYHAS6'
     )
 
     console.log('[meteora] loading pool...')
@@ -163,8 +177,26 @@ export async function executeLPPosition(
     const positionKeypair = Keypair.generate()
     console.log('[meteora] position:', positionKeypair.publicKey.toBase58())
 
-    const solLamports = new BN(1_000_000)
-    const usdcAmount = new BN(100_000)
+    // Calculate real amounts from capitalUSD
+    // Split 50/50 between SOL and USDC
+    const solPrice = await getSolPrice()
+    const halfCapital = capitalUSD / 2
+
+    // SOL amount (9 decimals)
+    const solAmount = halfCapital / solPrice
+    const solLamports = new BN(
+      Math.floor(solAmount * 1_000_000_000)
+    )
+
+    // USDC amount (6 decimals)
+    const usdcAmount = new BN(
+      Math.floor(halfCapital * 1_000_000)
+    )
+
+    console.log('[meteora] capital:', capitalUSD, 'USD')
+    console.log('[meteora] SOL price:', solPrice)
+    console.log('[meteora] depositing:',
+      solAmount.toFixed(4), 'SOL +', halfCapital, 'USDC')
 
     const { blockhash, lastValidBlockHeight } =
       await connection.getLatestBlockhash()
@@ -294,3 +326,47 @@ async function devnetFallbackTx(
     return { success: false, error: String(err) }
   }
 }
+
+export async function loadOnChainPositions(
+  walletAddress: string
+): Promise<Array<{
+  address: string
+  tokenA: string
+  tokenB: string
+  protocol: string
+  feeApr: number
+  signature: string
+  explorerUrl: string
+  timestamp: Date
+  capitalUSD: number
+}>> {
+  try {
+    const DLMM = (await import('@meteora-ag/dlmm')).default
+    const owner = new PublicKey(walletAddress)
+    const pool = await DLMM.create(connection, new PublicKey('5rCf1DM8LjKTw4YqhnoLcngyZYeNnQqztScTogYHAS6'))
+
+    const { userPositions } = await pool.getPositionsByUserAndLbPair(owner)
+
+    if (!userPositions || userPositions.length === 0) return []
+
+    return userPositions.map((pos: any) => ({
+      address: pos.publicKey?.toBase58() ?? '',
+      tokenA: 'SOL',
+      tokenB: 'USDC',
+      protocol: 'Meteora',
+      feeApr: 0,
+      signature: pos.publicKey?.toBase58() ?? '',
+      explorerUrl:
+        `https://explorer.solana.com/address/` +
+        `${pos.publicKey?.toBase58()}`,
+      timestamp: new Date(),
+      capitalUSD: 0,
+    }))
+  } catch (err) {
+    console.error('[solana] loadOnChainPositions:', err)
+    return []
+  }
+}
+
+
+

@@ -9,6 +9,7 @@ import {
   connectWallet,
   executeLPPosition,
   getBalance,
+  loadOnChainPositions,
   type WalletAdapter,
   type ExecutionResult,
 } from '@/lib/solana'
@@ -745,7 +746,7 @@ function ExecutionModal({
   strategy: StrategyCard
   capitalUSD: number
   onClose: () => void
-  onConfirm: (txData?: ExecutionResult) => void
+  onConfirm: (txData?: ExecutionResult, walletAddr?: string) => void
 }) {
     const [step, setStep] = useState<'preview' | 'connecting' | 'confirm' | 'executing' | 'success' | 'error'>('preview')
   const [walletAddress, setWalletAddress] = useState<string | null>(null)
@@ -801,7 +802,7 @@ function ExecutionModal({
     if (step !== 'success' || !txResult?.success) return
 
     const timeout = window.setTimeout(() => {
-      onConfirm(txResult ?? undefined)
+      onConfirm(txResult ?? undefined, walletAddress ?? undefined)
     }, 3500)
 
     return () => window.clearTimeout(timeout)
@@ -1237,7 +1238,7 @@ function SimulationResults({
   result: SimResult
   selectedStrategy: number
   onSelectStrategy: (i: number) => void
-  onExecute: (strategy: StrategyCard, txData?: ExecutionResult) => void
+  onExecute: (strategy: StrategyCard, txData?: ExecutionResult, walletAddr?: string) => void
 }) {
   const [showModal, setShowModal] = useState(false)
   const selected = result.strategies[selectedStrategy]
@@ -1376,10 +1377,11 @@ function SimulationResults({
             strategy={result.strategies[selectedStrategy]}
             capitalUSD={result.intent.capitalUSD}
             onClose={() => setShowModal(false)}
-            onConfirm={(txData) => {
+            onConfirm={(txData, walletAddr) => {
               onExecute(
                 result.strategies[selectedStrategy],
-                txData
+                txData,
+                walletAddr
               )
               setShowModal(false)
             }}
@@ -1399,11 +1401,40 @@ export default function AppPage() {
   const [selectedStrategy, setSelectedStrategy] = useState(0)
   const [executing, setExecuting] = useState(false)
   const [positions, setPositions] = useState<Position[]>([])
+  const [connectedWallet, setConnectedWallet] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  useEffect(() => {
+    if (!connectedWallet) return
+
+    loadOnChainPositions(connectedWallet)
+      .then(onChainPositions => {
+        if (onChainPositions.length > 0) {
+          setPositions(prev => {
+            const existingIds = new Set(prev.map(p => p.id))
+            const newOnes = onChainPositions.filter(
+              p => !existingIds.has(p.address)
+            )
+            return [...prev, ...newOnes.map(p => ({
+              id: p.address,
+              tokenA: p.tokenA,
+              tokenB: p.tokenB,
+              protocol: p.protocol,
+              feeApr: p.feeApr,
+              signature: p.signature,
+              explorerUrl: p.explorerUrl,
+              timestamp: p.timestamp,
+              capitalUSD: p.capitalUSD,
+            }))]
+          })
+        }
+      })
+      .catch(console.error)
+  }, [connectedWallet])
 
   const handleSubmit = async () => {
     const text = input.trim()
@@ -1490,7 +1521,8 @@ export default function AppPage() {
 
   const handleExecute = async (
     strategy: StrategyCard,
-    txData?: ExecutionResult
+    txData?: ExecutionResult,
+    walletAddr?: string
   ) => {
     setExecuting(true)
 
@@ -1507,6 +1539,10 @@ export default function AppPage() {
         capitalUSD: simResult?.intent.capitalUSD ?? 0,
       }
       setPositions(prev => [newPosition, ...prev])
+    }
+
+    if (walletAddr) {
+      setConnectedWallet(walletAddr)
     }
 
     const execMsg: Message = {
@@ -1845,5 +1881,7 @@ export default function AppPage() {
     </div>
   )
 }
+
+
 
 
