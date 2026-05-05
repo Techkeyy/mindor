@@ -11,11 +11,14 @@ import {
 } from '@solana/web3.js'
 import BN from 'bn.js'
 
-// Devnet connection
 export const connection = new Connection(
   clusterApiUrl('devnet'),
   { commitment: 'confirmed' }
 )
+
+const KNOWN_POOLS: Record<string, string> = {
+  'SOL-USDC': 'BL9k1nsrBxYtYQMxHy6HdcbLLjHLHShrQvrr2DuWaRXZ',
+}
 
 export type WalletAdapter = {
   publicKey: PublicKey | null
@@ -36,7 +39,6 @@ export type ExecutionResult = {
   tokenB?: string
 }
 
-/** Get Phantom wallet from window */
 export function getPhantomWallet(): WalletAdapter | null {
   if (typeof window === 'undefined') return null
   const phantom = (window as any)?.phantom?.solana
@@ -44,7 +46,6 @@ export function getPhantomWallet(): WalletAdapter | null {
   return phantom
 }
 
-/** Connect Phantom wallet */
 export async function connectWallet(): Promise<{
   wallet: WalletAdapter | null
   address: string | null
@@ -59,7 +60,7 @@ export async function connectWallet(): Promise<{
         error: 'Phantom wallet not found. Install from phantom.app'
       }
     }
-    // Add 15 second timeout to prevent infinite hang
+
     const connectWithTimeout = Promise.race([
       wallet.connect(),
       new Promise((_, reject) =>
@@ -83,7 +84,6 @@ export async function connectWallet(): Promise<{
 
     return { wallet, address }
   } catch (err: any) {
-    // User rejected or timeout
     if (
       err?.message?.includes('User rejected') ||
       err?.message?.includes('rejected')
@@ -94,6 +94,7 @@ export async function connectWallet(): Promise<{
         error: 'Connection cancelled. Click Connect Phantom to try again.'
       }
     }
+
     return {
       wallet: null,
       address: null,
@@ -102,7 +103,6 @@ export async function connectWallet(): Promise<{
   }
 }
 
-/** Check wallet SOL balance on devnet */
 export async function getBalance(
   address: string
 ): Promise<number> {
@@ -115,45 +115,23 @@ export async function getBalance(
   }
 }
 
-/**
- * Find a real Meteora DLMM pool on Devnet
- * Returns the best matching pool for the token pair
- */
 async function findMeteoraPool(
   tokenAMint: string,
   tokenBMint: string
 ): Promise<string | null> {
   try {
-    // Meteora DLMM program on devnet
-    const DLMM_PROGRAM_ID = new PublicKey(
-      'LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo'
-    )
-
-    // Known Devnet SOL/USDC pool — most reliable for demo
-    // This is a real Meteora DLMM pool on Solana Devnet
-    const KNOWN_POOLS: Record<string, string> = {
-      'SOL-USDC': 'C4PX3oMqCKLjELkAGHFwW9aFVB7VsMFjXXJBiGMzVyXY',
-      'USDC-SOL': 'C4PX3oMqCKLjELkAGHFwW9aFVB7VsMFjXXJBiGMzVyXY',
-    }
-
-    // Try to match known pools first
     const key1 = `${tokenAMint}-${tokenBMint}`
     const key2 = `${tokenBMint}-${tokenAMint}`
 
     if (KNOWN_POOLS[key1]) return KNOWN_POOLS[key1]
     if (KNOWN_POOLS[key2]) return KNOWN_POOLS[key2]
 
-    // Default to SOL/USDC pool
     return KNOWN_POOLS['SOL-USDC']
   } catch {
     return null
   }
 }
 
-/**
- * Execute real LP position on Meteora DLMM Devnet
- * Uses @meteora-ag/dlmm SDK to add real liquidity
- */
 export async function executeLPPosition(
   wallet: WalletAdapter,
   poolAddress: string,
@@ -164,122 +142,115 @@ export async function executeLPPosition(
       return { success: false, error: 'Wallet not connected' }
     }
 
-    // Dynamic import to avoid SSR issues
     const DLMM = (await import('@meteora-ag/dlmm')).default
 
-    // Use a known working Devnet pool
-    // SOL/USDC DLMM pool on Devnet
     const POOL = new PublicKey(
       'BL9k1nsrBxYtYQMxHy6HdcbLLjHLHShrQvrr2DuWaRXZ'
     )
 
     console.log('[meteora] loading pool...')
-
-    // Load the DLMM pool
     const dlmmPool = await DLMM.create(connection, POOL)
+    console.log('[meteora] pool loaded:', POOL.toBase58())
 
-    console.log('[meteora] pool loaded:',
-      dlmmPool.pubkey.toBase58())
-
-    // Get active bin (current price)
     const activeBin = await dlmmPool.getActiveBin()
     console.log('[meteora] active bin:', activeBin.binId)
 
-    // Calculate position range (5 bins each side)
     const BIN_RANGE = 5
     const minBinId = activeBin.binId - BIN_RANGE
     const maxBinId = activeBin.binId + BIN_RANGE
 
-    // Use small fixed amounts for demo
-    // 0.001 SOL + equivalent USDC
-    const solAmount = 0.001
-    const lamports = new BN(
-      Math.floor(solAmount * LAMPORTS_PER_SOL)
-    )
-
-    // Small USDC amount (6 decimals)
-    const usdcAmount = new BN(1000) // 0.001 USDC
-
-    console.log('[meteora] adding liquidity...')
-    console.log('[meteora] range:', minBinId, 'to', maxBinId)
-
-    // Generate a new position keypair for this LP position
     const positionKeypair = Keypair.generate()
-    console.log('[meteora] position keypair:',
-      positionKeypair.publicKey.toBase58())
+    console.log('[meteora] position:', positionKeypair.publicKey.toBase58())
 
-    // Build add liquidity transaction
-    const addLiquidityTx = await dlmmPool.addLiquidityByStrategy({
+    const solLamports = new BN(1_000_000)
+    const usdcAmount = new BN(100_000)
+
+    const { blockhash, lastValidBlockHeight } =
+      await connection.getLatestBlockhash()
+
+    console.log('[meteora] building initializePositionAndAddLiquidityByStrategy tx...')
+    const initPosTx = await dlmmPool.initializePositionAndAddLiquidityByStrategy({
       positionPubKey: positionKeypair.publicKey,
       user: wallet.publicKey,
-      totalXAmount: lamports,
+      totalXAmount: solLamports,
       totalYAmount: usdcAmount,
       strategy: {
         maxBinId,
         minBinId,
-        strategyType: 0, // Spot distribution
+        strategyType: 0,
       },
     })
 
-    console.log('[meteora] tx built, requesting signature...')
+    initPosTx.recentBlockhash = blockhash
+    initPosTx.feePayer = wallet.publicKey
+    initPosTx.partialSign(positionKeypair)
 
-    // Get fresh blockhash
-    const { blockhash, lastValidBlockHeight } =
-      await connection.getLatestBlockhash()
+    const signedInitTx = await wallet.signTransaction(initPosTx)
 
-    addLiquidityTx.recentBlockhash = blockhash
-    addLiquidityTx.feePayer = wallet.publicKey
-
-    // Position keypair must also sign the transaction
-    addLiquidityTx.partialSign(positionKeypair)
-
-    // Sign with Phantom
-    const signed = await wallet.signTransaction(addLiquidityTx)
-
-    // Send transaction
-    const signature = await connection.sendRawTransaction(
-      (signed as Transaction).serialize(),
-      { skipPreflight: false, maxRetries: 3 }
+    console.log('[meteora] sending initializePositionAndAddLiquidity...')
+    const initSig = await connection.sendRawTransaction(
+      (signedInitTx as Transaction).serialize(),
+      { skipPreflight: false }
     )
 
-    console.log('[meteora] tx sent:', signature)
-
-    // Confirm
     await connection.confirmTransaction({
-      signature,
+      signature: initSig,
       blockhash,
       lastValidBlockHeight,
     })
+    console.log('[meteora] position initialized:', initSig)
 
-    console.log('[meteora] tx confirmed!')
+    const { blockhash: blockhash2, lastValidBlockHeight: lvbh2 } =
+      await connection.getLatestBlockhash()
 
-    const explorerUrl =
-      `https://explorer.solana.com/tx/${signature}` +
-      `?cluster=devnet`
+    console.log('[meteora] building addLiquidity tx...')
+    const addLiqTx = await dlmmPool.addLiquidityByStrategy({
+      positionPubKey: positionKeypair.publicKey,
+      user: wallet.publicKey,
+      totalXAmount: solLamports,
+      totalYAmount: usdcAmount,
+      strategy: {
+        maxBinId,
+        minBinId,
+        strategyType: 0,
+      },
+    })
+
+    addLiqTx.recentBlockhash = blockhash2
+    addLiqTx.feePayer = wallet.publicKey
+
+    const signedAddTx = await wallet.signTransaction(addLiqTx)
+
+    console.log('[meteora] sending addLiquidity...')
+    const addSig = await connection.sendRawTransaction(
+      (signedAddTx as Transaction).serialize(),
+      { skipPreflight: false, maxRetries: 3 }
+    )
+
+    await connection.confirmTransaction({
+      signature: addSig,
+      blockhash: blockhash2,
+      lastValidBlockHeight: lvbh2,
+    })
+
+    console.log('[meteora] SUCCESS:', addSig)
 
     return {
       success: true,
-      signature,
-      explorerUrl,
+      signature: addSig,
+      explorerUrl:
+        `https://explorer.solana.com/tx/${addSig}` +
+        `?cluster=devnet`,
       poolAddress: POOL.toBase58(),
       tokenA: 'SOL',
       tokenB: 'USDC',
     }
-
   } catch (err: any) {
-    console.error('[meteora] error:', err)
-
-    // If Meteora fails, fall back to proof-of-concept tx
-    // so the demo never completely breaks
-    console.warn('[meteora] falling back to devnet transfer')
+    console.error('[meteora] failed, using fallback:', err.message)
     return await devnetFallbackTx(wallet)
   }
 }
 
-/**
- * Fallback: simple Devnet transaction if Meteora fails
- * Guarantees demo never breaks completely
- */
 async function devnetFallbackTx(
   wallet: WalletAdapter
 ): Promise<ExecutionResult> {
