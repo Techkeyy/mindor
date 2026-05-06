@@ -1564,6 +1564,27 @@ export default function AppPage() {
           }}>
             SIMULATION TERMINAL
           </div>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            marginLeft: 'auto',
+          }}>
+            <div style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: '#22C55E',
+              boxShadow: '0 0 8px #22C55E',
+              animation: 'pulse 2s infinite',
+            }} />
+            <span style={{
+              fontSize: 9,
+              color: 'var(--text-muted)',
+              letterSpacing: '0.2em',
+              fontFamily: 'monospace',
+            }}>LIVE DATA</span>
+          </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{
@@ -1607,12 +1628,27 @@ export default function AppPage() {
             flexShrink: 0,
           }}>
             <div style={{
-              fontSize: 10,
-              letterSpacing: '0.25em',
-              color: 'var(--text-muted)',
-              fontFamily: 'monospace',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
             }}>
-              INTENT TERMINAL
+              <span style={{
+                fontSize: 10,
+                letterSpacing: '0.25em',
+                color: 'var(--text-muted)',
+                fontFamily: 'monospace',
+              }}>
+                INTENT TERMINAL
+              </span>
+              <span style={{
+                fontSize: 9,
+                color: 'var(--accent-primary)',
+                fontFamily: 'monospace',
+                letterSpacing: '0.1em',
+                opacity: 0.7,
+              }}>
+                DefiLlama + Meteora
+              </span>
             </div>
           </div>
 

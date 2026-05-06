@@ -1,43 +1,51 @@
 # Mindor — Intent to Execution
 
-> DeFi LP simulation and execution platform on Solana
+> The first AI-powered DeFi LP simulation and 
+> execution platform on Solana.
 
-**"Describe your yield goal. See exactly what happens. Execute."**
+## What It Does
 
-## What is Mindor?
+Describe your yield goal in plain English.
+Mindor simulates every outcome before your 
+capital moves — then executes on-chain.
 
-Mindor is an AI-powered DeFi liquidity provision platform 
-that transforms natural language intent into on-chain LP 
-positions on Solana — with full simulation before any 
-capital moves.
+**Intent → Simulation → Execution**
 
 ## Live Demo
 
-🌐 **https://mindor-git-main-techkeyys-projects.vercel.app**
+https://mindor-seven.vercel.app
 
-## How It Works
+## Tech Stack
 
-1. **Intent** — Type your goal in plain English
-   ("$2k, low risk, stable yield")
-   
-2. **Simulation** — Mindor fetches live pool data from 
-   DefiLlama, runs IL and fee projections across 
-   all scenarios
-   
-3. **Execution** — Connect Phantom wallet, 
-   review the transaction, confirm on Solana
+- **AI**: Groq (Llama 3.3 70b) for intent parsing
+- **Data**: DefiLlama live pool data (486+ Solana pools)
+- **Execution**: Meteora DLMM on Solana Mainnet
+- **Frontend**: Next.js 16 + Framer Motion
+- **Bot**: Telegram bot for mobile access
 
 ## Features
 
-- 🧠 **AI Intent Parsing** — Groq (Llama 3.3 70B) 
-  extracts capital, risk profile, duration from 
-  natural language
-- 📊 **Live Pool Data** — 486+ real Solana LP pools 
-  from DefiLlama (updated hourly)
-- 📈 **IL Scenario Analysis** — Bear/base/bull case 
-  impermanent loss visualization
-- ⏱ **Time-based Projections** — 7D/30D/90D/365D 
-  fee earnings
+- Natural language intent parsing
+- Live fee projections (1D/7D/30D/1Y)
+- IL scenario analysis with dual charts
+- Real on-chain LP execution via Phantom
+- Persistent position tracking
+- Public simulation API for agents
+- Telegram bot integration
+
+## Public API
+
+Any AI agent can call the simulation layer:
+
+POST /api/mindor/simulate
+{
+  "intent": "2k, low risk, stables",
+  "capitalUSD": 2000
+}
+
+## Hackathon
+
+Built for 100xDevs Frontier Hackathon
 - 🤖 **Telegram Bot** — @MindorSimBot for 
   on-the-go simulations
 - 🔌 **Open API** — Any AI agent can call 

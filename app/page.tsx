@@ -150,7 +150,7 @@ export default function Home() {
 
         <section id="telegram" style={{ ...pageWidth, paddingTop: '128px', paddingBottom: '128px', background: 'var(--bg-surface)' }}>
           <div style={{ marginBottom: '12px', color: 'var(--text-primary)', fontSize: '34px', fontWeight: 700 }}>Use Mindor from Telegram</div>
-          <div style={{ color: 'var(--text-secondary)', marginBottom: '28px', maxWidth: '640px' }}>Send your intent to @MindorBot. Get strategies back in seconds.</div>
+          <div style={{ color: 'var(--text-secondary)', marginBottom: '28px', maxWidth: '640px' }}>Send your intent to @MindorSimBot. Get strategies back in seconds. USER MUST REPLACE WITH REAL BOT USERNAME.</div>
           <div style={{ maxWidth: '760px', margin: '0 auto', display: 'grid', gap: '14px' }}>
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <div style={{ ...panelStyle, maxWidth: '360px', padding: '16px 18px', background: 'var(--accent-primary)', color: 'var(--bg-base)', borderColor: 'var(--accent-primary)' }}>I have $5,000, want stable yield</div>
