@@ -48,14 +48,6 @@ export async function POST(req: NextRequest) {
       typeof parsed.summary !== 'string'
     ) throw new Error('Invalid shape from Groq')
 
-    // Enforce minimum capital for meaningful simulations
-    if (parsed.capitalUSD < 1000) {
-      parsed.capitalUSD = 1000
-      parsed.summary =
-        'Minimum $1,000 applied for meaningful simulation. ' +
-        parsed.summary
-    }
-
     return NextResponse.json(parsed)
 
   } catch (err) {

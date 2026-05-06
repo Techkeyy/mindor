@@ -11,9 +11,10 @@ Shape:
 }
 
 Rules:
-- capitalUSD: extract dollar amount. 
-  If amount is under 1000, set to 1000 minimum. 
-  Always return numeric value only.
+- capitalUSD: extract exact dollar amount mentioned. 
+  Default 1000 if no amount found.
+  Examples: '$50' -> 50, '$2000' -> 2000, 
+  '5k' -> 5000, 'ten dollars' -> 10
 - riskProfile: 
     low = safe/stable/stablecoins/conservative/protect
     high = aggressive/degen/max yield/risky/moon
