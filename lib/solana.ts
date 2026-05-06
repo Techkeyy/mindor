@@ -11,10 +11,19 @@ import {
 } from '@solana/web3.js'
 import BN from 'bn.js'
 
+const getRpcUrl = () => {
+  if (typeof window !== 'undefined') {
+    return process.env.NEXT_PUBLIC_SOLANA_RPC ?? 'https://mainnet.helius-rpc.com/?api-key=demo'
+  }
+  return process.env.NEXT_PUBLIC_SOLANA_RPC ?? 'https://api.mainnet-beta.solana.com'
+}
+
 export const connection = new Connection(
-  process.env.NEXT_PUBLIC_SOLANA_RPC ??
-    'https://rpc.ankr.com/solana',
-  { commitment: 'confirmed' }
+  getRpcUrl(),
+  {
+    commitment: 'confirmed',
+    wsEndpoint: undefined,
+  }
 )
 
 const KNOWN_POOLS: Record<string, string> = {
@@ -50,6 +59,7 @@ export function getPhantomWallet(): WalletAdapter | null {
 export async function connectWallet(): Promise<{
   wallet: WalletAdapter | null
   address: string | null
+  balance?: number
   error?: string
 }> {
   try {
@@ -83,7 +93,23 @@ export async function connectWallet(): Promise<{
       }
     }
 
-    return { wallet, address }
+    // Use Helius for balance check - avoids CORS
+    let balance = 0
+    try {
+      const balanceConn = new Connection(
+        process.env.NEXT_PUBLIC_SOLANA_RPC ??
+        'https://mainnet.helius-rpc.com/?api-key=demo',
+        'confirmed'
+      )
+      const lamports = await balanceConn.getBalance(
+        new PublicKey(address)
+      )
+      balance = lamports / LAMPORTS_PER_SOL
+    } catch {
+      balance = 0
+    }
+
+    return { wallet, address, balance }
   } catch (err: any) {
     if (
       err?.message?.includes('User rejected') ||

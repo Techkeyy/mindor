@@ -9,7 +9,6 @@ import {
   connectWallet,
   executeLPPosition,
   getBalance,
-  loadOnChainPositions,
   type WalletAdapter,
   type ExecutionResult,
 } from '@/lib/solana'
@@ -746,7 +745,7 @@ function ExecutionModal({
   strategy: StrategyCard
   capitalUSD: number
   onClose: () => void
-  onConfirm: (txData?: ExecutionResult, walletAddr?: string) => void
+  onConfirm: (txData?: ExecutionResult) => void
 }) {
     const [step, setStep] = useState<'preview' | 'connecting' | 'confirm' | 'executing' | 'success' | 'error'>('preview')
   const [walletAddress, setWalletAddress] = useState<string | null>(null)
@@ -754,23 +753,13 @@ function ExecutionModal({
   const [txResult, setTxResult] = useState<ExecutionResult | null>(null)
   const [walletAdapter, setWalletAdapter] = useState<WalletAdapter | null>(null)
   const [errorMsg, setErrorMsg] = useState<string>('')
-  const [solInput, setSolInput] = useState<string>('')
-  const [usdcInput, setUsdcInput] = useState<string>('')
   const color = STRATEGY_COLORS[strategy.label]
-
-  useEffect(() => {
-    const half = capitalUSD / 2
-    const estimatedSol = (half / 150).toFixed(4)
-    const estimatedUsdc = half.toFixed(2)
-    setSolInput(estimatedSol)
-    setUsdcInput(estimatedUsdc)
-  }, [capitalUSD])
 
   const handleConnect = async () => {
     setStep('connecting')
     setErrorMsg('')
 
-    const { wallet, address, error } =
+    const { wallet, address, balance, error } =
       await connectWallet()
 
     if (error || !wallet || !address) {
@@ -781,10 +770,9 @@ function ExecutionModal({
       return
     }
 
-    const balance = await getBalance(address)
     setWalletAdapter(wallet)
     setWalletAddress(address)
-    setWalletBalance(balance)
+    setWalletBalance(balance ?? await getBalance(address))
     setStep('confirm')
   }
 
@@ -792,15 +780,10 @@ function ExecutionModal({
     if (!walletAdapter) return
     setStep('executing')
 
-    const solAmt = parseFloat(solInput || '0')
-    const usdcAmt = parseFloat(usdcInput || '0')
-
     const result = await executeLPPosition(
       walletAdapter,
       strategy.pool.address,
       capitalUSD,
-      solAmt > 0 ? solAmt : undefined,
-      usdcAmt > 0 ? usdcAmt : undefined,
     )
 
     setTxResult(result)
@@ -817,7 +800,7 @@ function ExecutionModal({
     if (step !== 'success' || !txResult?.success) return
 
     const timeout = window.setTimeout(() => {
-      onConfirm(txResult ?? undefined, walletAddress ?? undefined)
+      onConfirm(txResult ?? undefined)
     }, 3500)
 
     return () => window.clearTimeout(timeout)
@@ -921,89 +904,6 @@ function ExecutionModal({
                   </div>
                 </div>
               ))}
-            </div>
-
-            <div style={{
-              background: 'var(--bg-base)',
-              borderRadius: 10,
-              padding: '14px 16px',
-              marginBottom: 20,
-              border: '1px solid var(--border-subtle)',
-            }}>
-              <div style={{
-                fontSize: 10,
-                color: 'var(--text-muted)',
-                letterSpacing: '0.2em',
-                fontFamily: 'monospace',
-                marginBottom: 12,
-              }}>
-                DEPOSIT AMOUNTS (EDITABLE)
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <div>
-                  <div style={{
-                    fontSize: 10,
-                    color: 'var(--text-muted)',
-                    fontFamily: 'monospace',
-                    marginBottom: 4,
-                  }}>SOL AMOUNT</div>
-                  <input
-                    type="number"
-                    value={solInput}
-                    onChange={e => setSolInput(e.target.value)}
-                    step="0.001"
-                    min="0.001"
-                    style={{
-                      width: '100%',
-                      background: 'var(--bg-elevated)',
-                      border: '1px solid var(--border-subtle)',
-                      borderRadius: 6,
-                      padding: '8px 10px',
-                      color: 'var(--text-primary)',
-                      fontFamily: 'monospace',
-                      fontSize: 14,
-                      outline: 'none',
-                    }}
-                  />
-                </div>
-                <div>
-                  <div style={{
-                    fontSize: 10,
-                    color: 'var(--text-muted)',
-                    fontFamily: 'monospace',
-                    marginBottom: 4,
-                  }}>USDC AMOUNT</div>
-                  <input
-                    type="number"
-                    value={usdcInput}
-                    onChange={e => setUsdcInput(e.target.value)}
-                    step="0.1"
-                    min="0.1"
-                    style={{
-                      width: '100%',
-                      background: 'var(--bg-elevated)',
-                      border: '1px solid var(--border-subtle)',
-                      borderRadius: 6,
-                      padding: '8px 10px',
-                      color: 'var(--text-primary)',
-                      fontFamily: 'monospace',
-                      fontSize: 14,
-                      outline: 'none',
-                    }}
-                  />
-                </div>
-              </div>
-              <div style={{
-                fontSize: 10,
-                color: 'var(--text-muted)',
-                marginTop: 8,
-                fontFamily: 'monospace',
-              }}>
-                Estimated total: ~${(
-                  (parseFloat(solInput || '0') * 150) +
-                  parseFloat(usdcInput || '0')
-                ).toFixed(2)} USD
-              </div>
             </div>
 
             <div style={{
@@ -1336,7 +1236,7 @@ function SimulationResults({
   result: SimResult
   selectedStrategy: number
   onSelectStrategy: (i: number) => void
-  onExecute: (strategy: StrategyCard, txData?: ExecutionResult, walletAddr?: string) => void
+  onExecute: (strategy: StrategyCard, txData?: ExecutionResult) => void
 }) {
   const [showModal, setShowModal] = useState(false)
   const selected = result.strategies[selectedStrategy]
@@ -1475,11 +1375,10 @@ function SimulationResults({
             strategy={result.strategies[selectedStrategy]}
             capitalUSD={result.intent.capitalUSD}
             onClose={() => setShowModal(false)}
-            onConfirm={(txData, walletAddr) => {
+            onConfirm={(txData) => {
               onExecute(
                 result.strategies[selectedStrategy],
-                txData,
-                walletAddr
+                txData
               )
               setShowModal(false)
             }}
@@ -1499,40 +1398,11 @@ export default function AppPage() {
   const [selectedStrategy, setSelectedStrategy] = useState(0)
   const [executing, setExecuting] = useState(false)
   const [positions, setPositions] = useState<Position[]>([])
-  const [connectedWallet, setConnectedWallet] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
-
-  useEffect(() => {
-    if (!connectedWallet) return
-
-    loadOnChainPositions(connectedWallet)
-      .then(onChainPositions => {
-        if (onChainPositions.length > 0) {
-          setPositions(prev => {
-            const existingIds = new Set(prev.map(p => p.id))
-            const newOnes = onChainPositions.filter(
-              p => !existingIds.has(p.address)
-            )
-            return [...prev, ...newOnes.map(p => ({
-              id: p.address,
-              tokenA: p.tokenA,
-              tokenB: p.tokenB,
-              protocol: p.protocol,
-              feeApr: p.feeApr,
-              signature: p.signature,
-              explorerUrl: p.explorerUrl,
-              timestamp: p.timestamp,
-              capitalUSD: p.capitalUSD,
-            }))]
-          })
-        }
-      })
-      .catch(console.error)
-  }, [connectedWallet])
 
   const handleSubmit = async () => {
     const text = input.trim()
@@ -1619,8 +1489,7 @@ export default function AppPage() {
 
   const handleExecute = async (
     strategy: StrategyCard,
-    txData?: ExecutionResult,
-    walletAddr?: string
+    txData?: ExecutionResult
   ) => {
     setExecuting(true)
 
@@ -1637,10 +1506,6 @@ export default function AppPage() {
         capitalUSD: simResult?.intent.capitalUSD ?? 0,
       }
       setPositions(prev => [newPosition, ...prev])
-    }
-
-    if (walletAddr) {
-      setConnectedWallet(walletAddr)
     }
 
     const execMsg: Message = {
@@ -1979,10 +1844,5 @@ export default function AppPage() {
     </div>
   )
 }
-
-
-
-
-
 
 
