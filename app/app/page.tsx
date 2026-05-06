@@ -1763,7 +1763,7 @@ export default function AppPage() {
       <div style={{
         flex: 1,
         display: 'flex',
-        overflow: 'hidden',
+        overflow: 'clip',
       }}>
 
         {/* LEFT PANEL */}
