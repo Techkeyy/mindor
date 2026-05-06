@@ -13,7 +13,7 @@ import BN from 'bn.js'
 
 export const connection = new Connection(
   process.env.NEXT_PUBLIC_SOLANA_RPC ??
-    clusterApiUrl('mainnet-beta'),
+    'https://rpc.ankr.com/solana',
   { commitment: 'confirmed' }
 )
 
@@ -151,6 +151,8 @@ export async function executeLPPosition(
   wallet: WalletAdapter,
   poolAddress: string,
   capitalUSD: number,
+  solOverride?: number,
+  usdcOverride?: number,
 ): Promise<ExecutionResult> {
   try {
     if (!wallet.publicKey) {
@@ -183,14 +185,15 @@ export async function executeLPPosition(
     const halfCapital = capitalUSD / 2
 
     // SOL amount (9 decimals)
-    const solAmount = halfCapital / solPrice
+    const solAmount = solOverride ?? (halfCapital / solPrice)
     const solLamports = new BN(
       Math.floor(solAmount * 1_000_000_000)
     )
 
     // USDC amount (6 decimals)
+    const usdcAmountNum = usdcOverride ?? halfCapital
     const usdcAmount = new BN(
-      Math.floor(halfCapital * 1_000_000)
+      Math.floor(usdcAmountNum * 1_000_000)
     )
 
     console.log('[meteora] capital:', capitalUSD, 'USD')

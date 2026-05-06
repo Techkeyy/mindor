@@ -754,7 +754,17 @@ function ExecutionModal({
   const [txResult, setTxResult] = useState<ExecutionResult | null>(null)
   const [walletAdapter, setWalletAdapter] = useState<WalletAdapter | null>(null)
   const [errorMsg, setErrorMsg] = useState<string>('')
+  const [solInput, setSolInput] = useState<string>('')
+  const [usdcInput, setUsdcInput] = useState<string>('')
   const color = STRATEGY_COLORS[strategy.label]
+
+  useEffect(() => {
+    const half = capitalUSD / 2
+    const estimatedSol = (half / 150).toFixed(4)
+    const estimatedUsdc = half.toFixed(2)
+    setSolInput(estimatedSol)
+    setUsdcInput(estimatedUsdc)
+  }, [capitalUSD])
 
   const handleConnect = async () => {
     setStep('connecting')
@@ -782,10 +792,15 @@ function ExecutionModal({
     if (!walletAdapter) return
     setStep('executing')
 
+    const solAmt = parseFloat(solInput || '0')
+    const usdcAmt = parseFloat(usdcInput || '0')
+
     const result = await executeLPPosition(
       walletAdapter,
       strategy.pool.address,
       capitalUSD,
+      solAmt > 0 ? solAmt : undefined,
+      usdcAmt > 0 ? usdcAmt : undefined,
     )
 
     setTxResult(result)
@@ -906,6 +921,89 @@ function ExecutionModal({
                   </div>
                 </div>
               ))}
+            </div>
+
+            <div style={{
+              background: 'var(--bg-base)',
+              borderRadius: 10,
+              padding: '14px 16px',
+              marginBottom: 20,
+              border: '1px solid var(--border-subtle)',
+            }}>
+              <div style={{
+                fontSize: 10,
+                color: 'var(--text-muted)',
+                letterSpacing: '0.2em',
+                fontFamily: 'monospace',
+                marginBottom: 12,
+              }}>
+                DEPOSIT AMOUNTS (EDITABLE)
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div>
+                  <div style={{
+                    fontSize: 10,
+                    color: 'var(--text-muted)',
+                    fontFamily: 'monospace',
+                    marginBottom: 4,
+                  }}>SOL AMOUNT</div>
+                  <input
+                    type="number"
+                    value={solInput}
+                    onChange={e => setSolInput(e.target.value)}
+                    step="0.001"
+                    min="0.001"
+                    style={{
+                      width: '100%',
+                      background: 'var(--bg-elevated)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: 6,
+                      padding: '8px 10px',
+                      color: 'var(--text-primary)',
+                      fontFamily: 'monospace',
+                      fontSize: 14,
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+                <div>
+                  <div style={{
+                    fontSize: 10,
+                    color: 'var(--text-muted)',
+                    fontFamily: 'monospace',
+                    marginBottom: 4,
+                  }}>USDC AMOUNT</div>
+                  <input
+                    type="number"
+                    value={usdcInput}
+                    onChange={e => setUsdcInput(e.target.value)}
+                    step="0.1"
+                    min="0.1"
+                    style={{
+                      width: '100%',
+                      background: 'var(--bg-elevated)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: 6,
+                      padding: '8px 10px',
+                      color: 'var(--text-primary)',
+                      fontFamily: 'monospace',
+                      fontSize: 14,
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+              </div>
+              <div style={{
+                fontSize: 10,
+                color: 'var(--text-muted)',
+                marginTop: 8,
+                fontFamily: 'monospace',
+              }}>
+                Estimated total: ~${(
+                  (parseFloat(solInput || '0') * 150) +
+                  parseFloat(usdcInput || '0')
+                ).toFixed(2)} USD
+              </div>
             </div>
 
             <div style={{
@@ -1881,6 +1979,9 @@ export default function AppPage() {
     </div>
   )
 }
+
+
+
 
 
 
