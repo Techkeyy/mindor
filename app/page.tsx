@@ -46,7 +46,7 @@ export default function Home() {
             ['Features', '#features'],
             ['How It Works', '#how-it-works'],
             ['API', '#api'],
-            ['Telegram', '#telegram'],
+            ['Telegram', 'https://t.me/mindorr_bot'],
           ].map(([label, href]) => (
             <a key={label} href={href} style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '12px', letterSpacing: '0.08em' }}>{label}</a>
           ))}
@@ -150,13 +150,15 @@ export default function Home() {
 
         <section id="telegram" style={{ ...pageWidth, paddingTop: '128px', paddingBottom: '128px', background: 'var(--bg-surface)' }}>
           <div style={{ marginBottom: '12px', color: 'var(--text-primary)', fontSize: '34px', fontWeight: 700 }}>Use Mindor from Telegram</div>
-          <div style={{ color: 'var(--text-secondary)', marginBottom: '28px', maxWidth: '640px' }}>Send your intent to @MindorSimBot. Get strategies back in seconds. USER MUST REPLACE WITH REAL BOT USERNAME.</div>
+          <div style={{ color: 'var(--text-secondary)', marginBottom: '28px', maxWidth: '640px' }}>Send your intent to @mindorr_bot. Get strategies back in seconds.</div>
           <div style={{ maxWidth: '760px', margin: '0 auto', display: 'grid', gap: '14px' }}>
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <div style={{ ...panelStyle, maxWidth: '360px', padding: '16px 18px', background: 'var(--accent-primary)', color: 'var(--bg-base)', borderColor: 'var(--accent-primary)' }}>I have $5,000, want stable yield</div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
               <div style={{ ...panelStyle, maxWidth: '520px', padding: '16px 18px', background: 'var(--bg-elevated)', color: 'var(--text-primary)' }}>
+                @mindorr_bot
+                <br />
                 Found 3 strategies for you:
                 <br />
                 - Conservative: USDC/USDT Meteora - 7.9% APR
@@ -191,7 +193,7 @@ export default function Home() {
             </div>
             <div style={{ display: 'flex', gap: '18px', justifyContent: 'center', color: 'var(--text-secondary)' }}>
               <a href="https://github.com" style={{ color: 'inherit', textDecoration: 'none' }}>GitHub</a>
-              <a href="#telegram" style={{ color: 'inherit', textDecoration: 'none' }}>Telegram</a>
+              <a href="https://t.me/mindorr_bot" style={{ color: 'inherit', textDecoration: 'none' }}>Telegram</a>
               <a href="#api" style={{ color: 'inherit', textDecoration: 'none' }}>Docs</a>
             </div>
             <div style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>Built on Solana x DefiLlama x Claude AI</div>

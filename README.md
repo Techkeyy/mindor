@@ -1,51 +1,47 @@
-# Mindor — Intent to Execution
+# Mindor - Intent to Execution
 
-> The first AI-powered DeFi LP simulation and 
-> execution platform on Solana.
+The first AI-powered DeFi LP simulation and 
+execution platform on Solana.
+
+## Live Demo
+https://mindor-seven.vercel.app
+
+## Telegram Bot
+https://t.me/mindorr_bot
 
 ## What It Does
 
-Describe your yield goal in plain English.
+Type your investment goal in plain English.
 Mindor simulates every outcome before your 
-capital moves — then executes on-chain.
+capital moves, then executes on Solana mainnet.
 
-**Intent → Simulation → Execution**
+Intent to Simulation to Execution.
 
-## Live Demo
-
-https://mindor-seven.vercel.app
-
-## Tech Stack
-
-- **AI**: Groq (Llama 3.3 70b) for intent parsing
-- **Data**: DefiLlama live pool data (486+ Solana pools)
-- **Execution**: Meteora DLMM on Solana Mainnet
-- **Frontend**: Next.js 16 + Framer Motion
-- **Bot**: Telegram bot for mobile access
+## Stack
+- AI: Groq Llama 3.3 70b intent parsing
+- Data: DefiLlama live Solana pool data
+- Execution: Meteora DLMM on Solana Mainnet
+- Frontend: Next.js 16 + Framer Motion + Recharts
+- Bot: Telegram @mindorr_bot
 
 ## Features
-
 - Natural language intent parsing
-- Live fee projections (1D/7D/30D/1Y)
-- IL scenario analysis with dual charts
-- Real on-chain LP execution via Phantom
-- Persistent position tracking
-- Public simulation API for agents
+- Live fee projections 1D/7D/30D/1Y
+- IL scenario analysis charts
+- Real on-chain LP execution via Phantom wallet
+- Persistent on-chain position tracking
+- Public simulation API for AI agents
 - Telegram bot integration
 
-## Public API
-
-Any AI agent can call the simulation layer:
+## Public Simulation API
 
 POST /api/mindor/simulate
-{
-  "intent": "2k, low risk, stables",
-  "capitalUSD": 2000
-}
+Body: { "intent": "2k low risk", "capitalUSD": 2000 }
 
-## Hackathon
+Any AI agent can call this endpoint directly.
 
-Built for 100xDevs Frontier Hackathon
+## Built For
+100xDevs Frontier Hackathon
 - 🤖 **Telegram Bot** — @MindorSimBot for 
   on-the-go simulations
 - 🔌 **Open API** — Any AI agent can call 

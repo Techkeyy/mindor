@@ -753,7 +753,17 @@ function ExecutionModal({
   const [txResult, setTxResult] = useState<ExecutionResult | null>(null)
   const [walletAdapter, setWalletAdapter] = useState<WalletAdapter | null>(null)
   const [errorMsg, setErrorMsg] = useState<string>('')
+  const [solInput, setSolInput] = useState<string>('')
+  const [usdcInput, setUsdcInput] = useState<string>('')
   const color = STRATEGY_COLORS[strategy.label]
+
+  useEffect(() => {
+    const half = capitalUSD / 2
+    const estimatedSol = (half / 150).toFixed(4)
+    const estimatedUsdc = half.toFixed(2)
+    setSolInput(estimatedSol)
+    setUsdcInput(estimatedUsdc)
+  }, [capitalUSD])
 
   const handleConnect = async () => {
     setStep('connecting')
@@ -918,6 +928,95 @@ function ExecutionModal({
               Note: You will be asked to approve this 
               transaction in your Phantom wallet. 
               Mindor never holds your private keys.
+            </div>
+
+            <div style={{
+              background: 'var(--bg-base)',
+              borderRadius: 10,
+              padding: '14px 16px',
+              marginBottom: 20,
+              border: '1px solid var(--border-subtle)',
+            }}>
+              <div style={{
+                fontSize: 10,
+                color: 'var(--text-muted)',
+                letterSpacing: '0.2em',
+                fontFamily: 'monospace',
+                marginBottom: 12,
+              }}>
+                DEPOSIT AMOUNTS (EDITABLE)
+              </div>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 10,
+              }}>
+                <div>
+                  <div style={{
+                    fontSize: 10,
+                    color: 'var(--text-muted)',
+                    fontFamily: 'monospace',
+                    marginBottom: 4,
+                  }}>SOL AMOUNT</div>
+                  <input
+                    type="number"
+                    value={solInput}
+                    onChange={e => setSolInput(e.target.value)}
+                    step="0.001"
+                    min="0.001"
+                    style={{
+                      width: '100%',
+                      background: 'var(--bg-elevated)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: 6,
+                      padding: '8px 10px',
+                      color: 'var(--text-primary)',
+                      fontFamily: 'monospace',
+                      fontSize: 14,
+                      outline: 'none',
+                      boxSizing: 'border-box' as const,
+                    }}
+                  />
+                </div>
+                <div>
+                  <div style={{
+                    fontSize: 10,
+                    color: 'var(--text-muted)',
+                    fontFamily: 'monospace',
+                    marginBottom: 4,
+                  }}>USDC AMOUNT</div>
+                  <input
+                    type="number"
+                    value={usdcInput}
+                    onChange={e => setUsdcInput(e.target.value)}
+                    step="0.1"
+                    min="0.1"
+                    style={{
+                      width: '100%',
+                      background: 'var(--bg-elevated)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: 6,
+                      padding: '8px 10px',
+                      color: 'var(--text-primary)',
+                      fontFamily: 'monospace',
+                      fontSize: 14,
+                      outline: 'none',
+                      boxSizing: 'border-box' as const,
+                    }}
+                  />
+                </div>
+              </div>
+              <div style={{
+                fontSize: 10,
+                color: 'var(--text-muted)',
+                marginTop: 8,
+                fontFamily: 'monospace',
+              }}>
+                Estimated total: ~${(
+                  (parseFloat(solInput || '0') * 150) +
+                  parseFloat(usdcInput || '0')
+                ).toFixed(2)} USD
+              </div>
             </div>
 
             <div style={{ display: 'flex', gap: 10 }}>
@@ -1564,26 +1663,20 @@ export default function AppPage() {
           }}>
             SIMULATION TERMINAL
           </div>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            marginLeft: 'auto',
-          }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <div style={{
               width: 6,
               height: 6,
               borderRadius: '50%',
               background: '#22C55E',
               boxShadow: '0 0 8px #22C55E',
-              animation: 'pulse 2s infinite',
             }} />
             <span style={{
               fontSize: 9,
               color: 'var(--text-muted)',
               letterSpacing: '0.2em',
               fontFamily: 'monospace',
-            }}>LIVE DATA</span>
+            }}>LIVE</span>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1631,6 +1724,7 @@ export default function AppPage() {
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
+              width: '100%',
             }}>
               <span style={{
                 fontSize: 10,
@@ -1644,7 +1738,6 @@ export default function AppPage() {
                 fontSize: 9,
                 color: 'var(--accent-primary)',
                 fontFamily: 'monospace',
-                letterSpacing: '0.1em',
                 opacity: 0.7,
               }}>
                 DefiLlama + Meteora
