@@ -372,25 +372,60 @@ export async function loadOnChainPositions(
   try {
     const DLMM = (await import('@meteora-ag/dlmm')).default
     const owner = new PublicKey(walletAddress)
-    const pool = await DLMM.create(connection, new PublicKey('5rCf1DM8LjKTw4YqhnoLcngyZYeNnQqztScTogYHAS6'))
 
-    const { userPositions } = await pool.getPositionsByUserAndLbPair(owner)
+    // Get all positions for this wallet across all pools
+    const userPositions = await DLMM.getAllLbPairPositionsByUser(
+      connection,
+      owner
+    )
 
-    if (!userPositions || userPositions.length === 0) return []
+    if (!userPositions || userPositions.size === 0) {
+      console.log('[positions] no positions found for', walletAddress)
+      return []
+    }
 
-    return userPositions.map((pos: any) => ({
-      address: pos.publicKey?.toBase58() ?? '',
-      tokenA: 'SOL',
-      tokenB: 'USDC',
-      protocol: 'Meteora',
-      feeApr: 0,
-      signature: pos.publicKey?.toBase58() ?? '',
-      explorerUrl:
-        `https://explorer.solana.com/address/` +
-        `${pos.publicKey?.toBase58()}`,
-      timestamp: new Date(),
-      capitalUSD: 0,
-    }))
+    const positions: Array<{
+      address: string
+      tokenA: string
+      tokenB: string
+      protocol: string
+      feeApr: number
+      signature: string
+      explorerUrl: string
+      timestamp: Date
+      capitalUSD: number
+    }> = []
+
+    userPositions.forEach((positionData: any, lbPairKey: any) => {
+      const lbPairAddress = typeof lbPairKey === 'string'
+        ? lbPairKey
+        : lbPairKey.toBase58?.() ?? ''
+
+      if (positionData?.lbPair) {
+        const tokenX = positionData.lbPair.tokenX?.mint?.toBase58?.() ?? 'Unknown'
+        const tokenY = positionData.lbPair.tokenY?.mint?.toBase58?.() ?? 'Unknown'
+
+        const userPosArray = positionData.lbPairPositionsData ?? []
+        userPosArray.forEach((pos: any) => {
+          const posAddress = pos.publicKey?.toBase58?.() ?? lbPairAddress
+          positions.push({
+            address: posAddress,
+            tokenA: tokenX.slice(0, 4) === 'So11' ? 'SOL' : tokenX.slice(0, 6),
+            tokenB: tokenY.slice(0, 4) === 'EPjF' ? 'USDC' : tokenY.slice(0, 6),
+            protocol: 'Meteora',
+            feeApr: 0,
+            signature: posAddress,
+            explorerUrl: `https://explorer.solana.com/address/${posAddress}`,
+            timestamp: new Date(),
+            capitalUSD: 0,
+          })
+        })
+      }
+    })
+
+    console.log('[positions] found', positions.length, 'positions for', walletAddress)
+    return positions
+
   } catch (err) {
     console.error('[solana] loadOnChainPositions:', err)
     return []

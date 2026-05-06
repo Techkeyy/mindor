@@ -9,6 +9,7 @@ import {
   connectWallet,
   executeLPPosition,
   getBalance,
+  loadOnChainPositions,
   type WalletAdapter,
   type ExecutionResult,
 } from '@/lib/solana'
@@ -1345,7 +1346,7 @@ function SimulationResults({
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
-      overflow: 'hidden',
+      overflow: 'clip',
     }}>
       {/* Intent summary bar */}
       <motion.div
@@ -1497,12 +1498,50 @@ export default function AppPage() {
   const [selectedStrategy, setSelectedStrategy] = useState(0)
   const [executing, setExecuting] = useState(false)
   const [positions, setPositions] = useState<Position[]>([])
+  const [connectedWallet, setConnectedWallet] = useState<string | null>(null)
+  const [walletConnecting, setWalletConnecting] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  const loadPositionsForWallet = async (address: string) => {
+    try {
+      const onChain = await loadOnChainPositions(address)
+      setPositions(onChain.map(position => ({
+        id: position.address,
+        tokenA: position.tokenA,
+        tokenB: position.tokenB,
+        protocol: position.protocol,
+        feeApr: position.feeApr,
+        signature: position.signature,
+        explorerUrl: position.explorerUrl,
+        timestamp: position.timestamp,
+        capitalUSD: position.capitalUSD,
+      })))
+    } catch (err) {
+      console.error('Failed to load on-chain positions:', err)
+    }
+  }
+
+  const handleWalletConnect = async () => {
+    if (walletConnecting) return
+
+    setWalletConnecting(true)
+    try {
+      const { address, error } = await connectWallet()
+      if (!address || error) {
+        console.error(error ?? 'Failed to connect wallet')
+        return
+      }
+
+      setConnectedWallet(address)
+      await loadPositionsForWallet(address)
+    } finally {
+      setWalletConnecting(false)
+    }
+  }
   const handleSubmit = async () => {
     const text = input.trim()
     if (!text || loading) return
@@ -1680,6 +1719,29 @@ export default function AppPage() {
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            onClick={handleWalletConnect}
+            disabled={walletConnecting}
+            style={{
+              padding: '6px 12px',
+              borderRadius: 8,
+              border: connectedWallet
+                ? '1px solid var(--accent-primary)44'
+                : '1px solid var(--accent-primary)',
+              background: 'transparent',
+              color: connectedWallet
+                ? 'var(--text-muted)'
+                : 'var(--accent-primary)',
+              fontSize: 10,
+              letterSpacing: '0.16em',
+              fontFamily: 'monospace',
+              cursor: walletConnecting ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {connectedWallet
+              ? `${connectedWallet.slice(0, 4)}...${connectedWallet.slice(-4)}`
+              : walletConnecting ? 'CONNECTING...' : 'CONNECT WALLET'}
+          </button>
           <div style={{
             width: 6, height: 6,
             borderRadius: '50%',
@@ -1927,7 +1989,7 @@ export default function AppPage() {
         }}>
           <PositionsPanel positions={positions} />
 
-          <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+          <div style={{ flex: 1, overflow: 'auto', position: 'relative' }}>
             <AnimatePresence mode="wait">
               {!simResult && !loading && (
                 <motion.div
