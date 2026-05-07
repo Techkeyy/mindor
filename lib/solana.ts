@@ -356,6 +356,41 @@ async function devnetFallbackTx(
   }
 }
 
+export function savePositionToStorage(
+  walletAddress: string,
+  position: {
+    address: string
+    tokenA: string
+    tokenB: string
+    protocol: string
+    feeApr: number
+    signature: string
+    explorerUrl: string
+    timestamp: Date
+    capitalUSD: number
+  }
+) {
+  try {
+    if (typeof window === 'undefined') return
+
+    const key = `mindor_positions_${walletAddress}`
+    const existing = JSON.parse(
+      localStorage.getItem(key) ?? '[]'
+    )
+    const filtered = existing.filter(
+      (p: any) => p.address !== position.address
+    )
+    filtered.unshift(position)
+    localStorage.setItem(
+      key,
+      JSON.stringify(filtered.slice(0, 50))
+    )
+    console.log('[positions] saved to localStorage')
+  } catch (e) {
+    console.error('[positions] save error:', e)
+  }
+}
+
 export async function loadOnChainPositions(
   walletAddress: string
 ): Promise<Array<{
@@ -369,67 +404,114 @@ export async function loadOnChainPositions(
   timestamp: Date
   capitalUSD: number
 }>> {
+  const results: Array<{
+    address: string
+    tokenA: string
+    tokenB: string
+    protocol: string
+    feeApr: number
+    signature: string
+    explorerUrl: string
+    timestamp: Date
+    capitalUSD: number
+  }> = []
+
   try {
     const DLMM = (await import('@meteora-ag/dlmm')).default
+    const dlmmAny = DLMM as any
     const owner = new PublicKey(walletAddress)
 
-    // Get all positions for this wallet across all pools
-    const userPositions = await DLMM.getAllLbPairPositionsByUser(
-      connection,
-      owner
-    )
+    // Try loading from Meteora SDK first
+    try {
+      const getAllMethod = dlmmAny.getAllLbPairPositionsByUser
+        ?? dlmmAny.getPositionsByUserAndLbPair
 
-    if (!userPositions || userPositions.size === 0) {
-      console.log('[positions] no positions found for', walletAddress)
-      return []
-    }
+      if (getAllMethod) {
+        const data = await getAllMethod(connection, owner)
 
-    const positions: Array<{
-      address: string
-      tokenA: string
-      tokenB: string
-      protocol: string
-      feeApr: number
-      signature: string
-      explorerUrl: string
-      timestamp: Date
-      capitalUSD: number
-    }> = []
+        const posMap = data?.userPositions ?? data
 
-    userPositions.forEach((positionData: any, lbPairKey: any) => {
-      const lbPairAddress = typeof lbPairKey === 'string'
-        ? lbPairKey
-        : lbPairKey.toBase58?.() ?? ''
+        if (posMap && typeof posMap.forEach === 'function') {
+          posMap.forEach((posData: any, key: any) => {
+            const pairKey = typeof key === 'string'
+              ? key
+              : key?.toBase58?.() ?? ''
 
-      if (positionData?.lbPair) {
-        const tokenX = positionData.lbPair.tokenX?.mint?.toBase58?.() ?? 'Unknown'
-        const tokenY = positionData.lbPair.tokenY?.mint?.toBase58?.() ?? 'Unknown'
+            const posArray = posData?.lbPairPositionsData
+              ?? posData?.positions
+              ?? (Array.isArray(posData) ? posData : [])
 
-        const userPosArray = positionData.lbPairPositionsData ?? []
-        userPosArray.forEach((pos: any) => {
-          const posAddress = pos.publicKey?.toBase58?.() ?? lbPairAddress
-          positions.push({
-            address: posAddress,
-            tokenA: tokenX.slice(0, 4) === 'So11' ? 'SOL' : tokenX.slice(0, 6),
-            tokenB: tokenY.slice(0, 4) === 'EPjF' ? 'USDC' : tokenY.slice(0, 6),
-            protocol: 'Meteora',
-            feeApr: 0,
-            signature: posAddress,
-            explorerUrl: `https://explorer.solana.com/address/${posAddress}`,
-            timestamp: new Date(),
-            capitalUSD: 0,
+            posArray.forEach((pos: any) => {
+              const addr = pos?.publicKey?.toBase58?.()
+                ?? pos?.address?.toBase58?.()
+                ?? pairKey
+
+              const mintX = posData?.lbPair?.tokenX?.mint
+                ?.toBase58?.() ?? ''
+              const mintY = posData?.lbPair?.tokenY?.mint
+                ?.toBase58?.() ?? ''
+
+              const tokenA = mintX.startsWith('So1111')
+                ? 'SOL'
+                : mintX.slice(0, 4)
+              const tokenB = mintY.startsWith('EPjFW')
+                ? 'USDC'
+                : mintY.startsWith('Es9v')
+                ? 'USDT'
+                : mintY.slice(0, 4)
+
+              results.push({
+                address: addr,
+                tokenA,
+                tokenB,
+                protocol: 'Meteora',
+                feeApr: 0,
+                signature: addr,
+                explorerUrl:
+                  `https://explorer.solana.com/address/${addr}`,
+                timestamp: new Date(),
+                capitalUSD: 0,
+              })
+            })
           })
-        })
+        }
       }
-    })
-
-    console.log('[positions] found', positions.length, 'positions for', walletAddress)
-    return positions
-
-  } catch (err) {
-    console.error('[solana] loadOnChainPositions:', err)
-    return []
+      console.log('[positions] found', results.length,
+        'on-chain positions')
+    } catch (err: any) {
+      console.error('[positions] SDK error:', err?.message)
+    }
+  } catch (err: any) {
+    console.error('[positions] SDK load error:', err?.message)
   }
+
+  // ALWAYS merge with localStorage backup
+  try {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(
+        `mindor_positions_${walletAddress}`
+      )
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        // Add stored positions not already in results
+        const existingIds = new Set(results.map(r => r.address))
+        parsed.forEach((p: any) => {
+          if (!existingIds.has(p.address)) {
+            results.push({
+              ...p,
+              timestamp: new Date(p.timestamp),
+            })
+          }
+        })
+        console.log('[positions] merged', parsed.length,
+          'stored positions')
+      }
+    }
+  } catch (e) {
+    console.error('[positions] localStorage error:', e)
+  }
+
+  return results
 }
 
 

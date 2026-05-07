@@ -10,6 +10,7 @@ import {
   executeLPPosition,
   getBalance,
   loadOnChainPositions,
+  savePositionToStorage,
   type WalletAdapter,
   type ExecutionResult,
 } from '@/lib/solana'
@@ -1644,6 +1645,14 @@ export default function AppPage() {
         capitalUSD: simResult?.intent.capitalUSD ?? 0,
       }
       setPositions(prev => [newPosition, ...prev])
+
+      // Save to localStorage so it persists on refresh
+      if (connectedWallet) {
+        savePositionToStorage(connectedWallet, {
+          ...newPosition,
+          address: txData.signature,
+        })
+      }
     }
 
     const execMsg: Message = {
