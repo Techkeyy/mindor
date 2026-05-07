@@ -1,108 +1,120 @@
 # Mindor - Intent to Execution
 
-The first AI-powered DeFi LP simulation and 
-execution platform on Solana.
+> The first AI-powered DeFi LP simulation and 
+> execution platform on Solana.
 
-## Live Demo
-https://mindor-seven.vercel.app
+**Live Demo:** https://mindor-seven.vercel.app  
+**Telegram Bot:** https://t.me/mindorr_bot
 
-## Telegram Bot
-https://t.me/mindorr_bot
+---
 
 ## What It Does
 
 Type your investment goal in plain English.
-Mindor simulates every outcome before your 
-capital moves, then executes on Solana mainnet.
+Mindor parses your intent with AI, fetches live 
+pool data, simulates every outcome, then executes 
+a real LP position on Solana mainnet — all in one flow.
 
-Intent to Simulation to Execution.
+**Intent → Simulation → Execution**
 
-## Stack
-- AI: Groq Llama 3.3 70b intent parsing
-- Data: DefiLlama live Solana pool data
-- Execution: Meteora DLMM on Solana Mainnet
-- Frontend: Next.js 16 + Framer Motion + Recharts
-- Bot: Telegram @mindorr_bot
+---
+
+## The Problem
+
+DeFi liquidity provision is one of the best yield 
+opportunities in crypto. But almost nobody does it 
+well because:
+
+- Thousands of pools with no clear signal
+- Impermanent loss is invisible until it hits
+- Execution requires technical knowledge
+
+Mindor solves all three in a single interface.
+
+---
 
 ## Features
-- Natural language intent parsing
-- Live fee projections 1D/7D/30D/1Y
-- IL scenario analysis charts
-- Real on-chain LP execution via Phantom wallet
-- Persistent on-chain position tracking
-- Public simulation API for AI agents
-- Telegram bot integration
 
-## Public Simulation API
+- **AI Intent Parsing** — Groq Llama 3.3 70b
+- **Live Pool Data** — 486+ Solana pools via DefiLlama
+- **Simulation** — Fee projections (1D/7D/30D/1Y) + IL analysis
+- **Real Execution** — Meteora DLMM on Solana Mainnet
+- **Persistent Positions** — On-chain position loading
+- **Telegram Bot** — @mindorr_bot for mobile access
+- **Public API** — Any AI agent can call the simulation layer
 
-POST /api/mindor/simulate
-Body: { "intent": "2k low risk", "capitalUSD": 2000 }
-
-Any AI agent can call this endpoint directly.
-
-## Built For
-100xDevs Frontier Hackathon
-- 🤖 **Telegram Bot** — @MindorSimBot for 
-  on-the-go simulations
-- 🔌 **Open API** — Any AI agent can call 
-  Mindor's simulation layer
-
-## Public API
-POST /api/mindor/simulate
-
-```json
-{
-  "intent": "$2000, low risk, stable yield",
-  "capitalUSD": 2000,
-  "riskProfile": "low",
-  "durationDays": 30
-}
-```
-
-Returns 3 ranked strategies with full fee projections 
-and IL analysis. No API key required.
+---
 
 ## Tech Stack
 
-- **Frontend** — Next.js 14, Framer Motion, Recharts
-- **AI** — Groq API (Llama 3.3 70B)
-- **Data** — DefiLlama Yields API (free, no key)
-- **Blockchain** — Solana, Phantom Wallet
-- **Bot** — Telegram Bot API
-- **Deploy** — Vercel
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 16 (App Router) |
+| AI/LLM | Groq (Llama 3.3 70b) |
+| LP Data | DefiLlama Yields API |
+| Blockchain | Solana Web3.js + Meteora DLMM SDK |
+| Wallet | Phantom |
+| Animations | Framer Motion |
+| Charts | Recharts |
+| Deployment | Vercel |
 
-## Hackathon Tracks
+---
 
-- **100xDevs Frontier Track** — Full-stack AI + 
-  Blockchain application
+## Public Simulation API
 
+Any AI agent can call Mindor's simulation layer:
+
+POST /api/mindor/simulate
+Content-Type: application/json
+
+{
+  "intent": "2k low risk stable yield",
+  "capitalUSD": 2000
+}
+
+Returns strategies, fee projections, and IL analysis.
+No API key required.
+
+---
+
+## Telegram Bot
+
+Send your intent to @mindorr_bot on Telegram.
+Receive simulation results in seconds with a 
+deep link back to execute on-chain.
+
+---
 
 ## Architecture
-User Intent (NL)
-↓
-Groq LLM Parser
-↓
-DefiLlama Pool Fetch (486+ Solana pools)
-↓
-Simulation Engine (IL math, fee projections)
-↓
-Strategy Ranking (Conservative/Balanced/Aggressive)
-↓
-Visual Simulation (charts, scenarios, projections)
-↓
-Solana Execution (Phantom wallet, on-chain tx)
 
-## Environment Variables
-GROQ_API_KEY=
-TELEGRAM_BOT_TOKEN=
-NEXT_PUBLIC_SOLANA_RPC=
-NEXT_PUBLIC_APP_URL=
+User Intent (Natural Language)
+       |
+  Groq AI Parser
+       |
+  DefiLlama Pool Fetch (486+ pools)
+       |
+  Simulation Engine (Fee math + IL curves)
+       |
+  Strategy Cards (Conservative/Balanced/Aggressive)
+       |
+  Phantom Wallet Connect
+       |
+  Meteora DLMM addLiquidity (Solana Mainnet)
+       |
+  On-chain Position Confirmed
 
-## Local Development
+---
 
-```bash
-npm install
-npm run dev
-```
+## Roadmap
 
-Open http://localhost:3001
+- Position management (remove liquidity, claim fees)
+- Delegated execution via Squads Protocol
+- Autonomous rebalancing agent
+- Multi-protocol support (Orca, Raydium)
+- LPAgent.io integration for deeper analytics
+
+---
+
+## Built For
+
+100xDevs Frontier Hackathon
