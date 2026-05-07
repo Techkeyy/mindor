@@ -1346,7 +1346,7 @@ function SimulationResults({
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
-      overflow: 'clip',
+      overflow: 'hidden',
     }}>
       {/* Intent summary bar */}
       <motion.div
@@ -1665,7 +1665,7 @@ export default function AppPage() {
       background: 'var(--bg-base)',
       color: 'var(--text-primary)',
       fontFamily: "Inter, 'JetBrains Mono', monospace",
-        overflow: 'clip',
+        overflow: 'hidden',
     }}>
 
       {/* Top bar */}
@@ -1763,7 +1763,7 @@ export default function AppPage() {
       <div style={{
         flex: 1,
         display: 'flex',
-        overflow: 'clip',
+          overflow: 'hidden',
       }}>
 
         {/* LEFT PANEL */}
@@ -1982,7 +1982,7 @@ export default function AppPage() {
         {/* RIGHT PANEL */}
         <div style={{
           flex: 1,
-          overflow: 'clip',
+          overflow: 'hidden',
           position: 'relative',
           display: 'flex',
           flexDirection: 'column',

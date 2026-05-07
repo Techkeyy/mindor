@@ -37,7 +37,8 @@ export default function Home() {
     <div style={{
       background: 'var(--bg-base)',
       color: 'var(--text-primary)',
-      fontFamily: "Inter, 'JetBrains Mono', monospace"
+      fontFamily: "Inter, 'JetBrains Mono', monospace",
+      overflowY: 'auto',
     }}>
       <header style={{ position: 'fixed', top: 0, left: 0, right: 0, height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', background: 'rgba(19, 26, 36, 0.8)', backdropFilter: 'blur(14px)', borderBottom: '1px solid var(--border-subtle)', zIndex: 50 }}>
         <div style={{ color: 'var(--accent-primary)', fontSize: '11px', letterSpacing: '0.35em' }}>MINDOR</div>
