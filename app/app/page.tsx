@@ -1665,7 +1665,7 @@ export default function AppPage() {
       background: 'var(--bg-base)',
       color: 'var(--text-primary)',
       fontFamily: "Inter, 'JetBrains Mono', monospace",
-      overflow: 'hidden',
+        overflow: 'clip',
     }}>
 
       {/* Top bar */}
@@ -1982,7 +1982,7 @@ export default function AppPage() {
         {/* RIGHT PANEL */}
         <div style={{
           flex: 1,
-          overflow: 'hidden',
+          overflow: 'clip',
           position: 'relative',
           display: 'flex',
           flexDirection: 'column',
