@@ -292,6 +292,19 @@ export async function executeLPPosition(
     console.log('[mindor] depositing:', amountX.toFixed(decimalsX), 'token X +',
       amountY.toFixed(decimalsY), 'token Y')
 
+    // Pre-flight balance check
+    const walletBalance = await getBalance(wallet.publicKey.toBase58())
+    const REQUIRED_POSITION_RENT = 0.058 // SOL needed for position account creation
+    let requiredSOL = REQUIRED_POSITION_RENT
+    if (mintForX === MINT_SOL) requiredSOL += amountX
+    if (mintForY === MINT_SOL) requiredSOL += amountY
+    if (walletBalance < requiredSOL) {
+      return {
+        success: false,
+        error: `Insufficient SOL balance. You have ${walletBalance.toFixed(4)} SOL but need at least ${requiredSOL.toFixed(4)} SOL (${REQUIRED_POSITION_RENT} for position creation${mintForX === MINT_SOL || mintForY === MINT_SOL ? ` + deposit amount` : ''}). Add SOL to your wallet and try again.`,
+      }
+    }
+
     const { blockhash, lastValidBlockHeight } =
       await connection.getLatestBlockhash()
 
@@ -340,8 +353,20 @@ export async function executeLPPosition(
       poolAddress: poolPubkey.toBase58(),
     }
   } catch (err: any) {
-    console.error('[mindor] execution failed:', err.message)
-    return { success: false, error: err.message ?? String(err) }
+    const msg = err?.message ?? String(err)
+    console.error('[mindor] execution failed:', msg)
+
+    // Detect insufficient balance errors
+    if (msg.includes('insufficient lamports') || msg.includes('0x1')) {
+      const match = msg.match(/need (\d+)/)
+      const needed = match ? parseInt(match[1]) / 1e9 : 0.058
+      return {
+        success: false,
+        error: `Insufficient SOL balance. You need at least ${needed.toFixed(4)} SOL to open this position (includes ~0.058 SOL for position rent + deposit amount). Add SOL to your wallet and try again.`,
+      }
+    }
+
+    return { success: false, error: msg }
   }
 }
 
