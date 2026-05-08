@@ -29,17 +29,13 @@ export default function ExecutionModal({
   const [txResult, setTxResult] = useState<ExecutionResult | null>(null);
   const [walletAdapter, setWalletAdapter] = useState<WalletAdapter | null>(null);
   const [errorMsg, setErrorMsg] = useState<string>("");
-  const [solInput, setSolInput] = useState<string>("");
-  const [usdcInput, setUsdcInput] = useState<string>("");
   const color = STRATEGY_COLORS[strategy.label];
 
-  useEffect(() => {
-    const half = capitalUSD / 2;
-    const estimatedSol = (half / 150).toFixed(4);
-    const estimatedUsdc = half.toFixed(2);
-    setSolInput(estimatedSol);
-    setUsdcInput(estimatedUsdc);
-  }, [capitalUSD]);
+  // Derived defaults from capitalUSD — only used for initial values
+  const defaultSol = ((capitalUSD / 2) / 150).toFixed(4);
+  const defaultUsdc = (capitalUSD / 2).toFixed(2);
+  const [solInput, setSolInput] = useState<string>(defaultSol);
+  const [usdcInput, setUsdcInput] = useState<string>(defaultUsdc);
 
   const handleConnect = async () => {
     setStep("connecting");
