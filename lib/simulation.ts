@@ -85,6 +85,9 @@ export function rankStrategies(
   pools: import('./defillama').Pool[],
   capitalUSD: number
 ): StrategyCard[] {
+  // Guard: if we couldn't find enough pools, pad with fallback (best-effort)
+  const safe = (idx: number) => pools[idx] ?? pools[pools.length - 1] ?? pools[0]
+
   const conservative = [...pools]
     .filter(p => p.ilRisk === 'low')
     .sort((a, b) => b.netApr - a.netApr)[0] ?? safe(0)
@@ -95,9 +98,6 @@ export function rankStrategies(
 
   const aggressive = [...pools]
     .sort((a, b) => b.feeApr - a.feeApr)[0] ?? safe(0)
-
-  // Guard: if we couldn't find enough pools, pad with fallback (best-effort)
-  const safe = (idx: number) => pools[idx] ?? pools[pools.length - 1] ?? pools[0]
 
   const makeCard = (
     rank: 1 | 2 | 3,

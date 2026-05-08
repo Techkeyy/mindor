@@ -278,15 +278,37 @@ export async function closeLPPosition(
     console.log('[meteora] loading pool for withdrawal:', poolPubkey.toBase58())
     const dlmmPool = await DLMM.create(connection, poolPubkey)
 
+    // Fetch position data to get bin range
+    const { userPositions } = await dlmmPool.getPositionsByUserAndLbPair(
+      wallet.publicKey
+    )
+    const posData = userPositions.find(
+      (p) => p.publicKey.toBase58() === positionPubkey.toBase58()
+    )
+    if (!posData) {
+      return { success: false, error: 'Position not found for this wallet' }
+    }
+    const { lowerBinId, upperBinId } = posData.positionData
+
     const { blockhash, lastValidBlockHeight } =
       await connection.getLatestBlockhash()
 
     console.log('[meteora] building removeLiquidity tx...')
-    const tx = await dlmmPool.removeLiquidity({
-      positionPubKey: positionPubkey,
+    const txs = await dlmmPool.removeLiquidity({
+      position: positionPubkey,
       user: wallet.publicKey,
+      fromBinId: lowerBinId,
+      toBinId: upperBinId,
+      bps: new BN(10000), // 100% withdrawal
+      shouldClaimAndClose: true,
     })
 
+    if (txs.length === 0) {
+      return { success: false, error: 'No transactions generated' }
+    }
+
+    // Sign and send the first transaction (typical single-tx close)
+    const tx = txs[0]
     tx.recentBlockhash = blockhash
     tx.feePayer = wallet.publicKey
 

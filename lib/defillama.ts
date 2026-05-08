@@ -109,9 +109,7 @@ export async function fetchTopPools(
   riskProfile: RiskProfile
 ): Promise<Pool[]> {
   try {
-    const res = await fetch('https://yields.llama.fi/pools', {
-      next: { revalidate: 3600 } // cache 1 hour
-    })
+    const res = await fetch('https://yields.llama.fi/pools')
     if (!res.ok) throw new Error(`DefiLlama error: ${res.status}`)
 
     const { data }: { data: LlamaPool[] } = await res.json()
