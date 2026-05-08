@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Pool } from "@/lib/defillama";
 import type { StrategyCard } from "@/lib/simulation";
-import { connectWallet, loadOnChainPositions, loadPositionsFromStorage, savePositionToStorage, closeLPPosition, type ExecutionResult } from "@/lib/solana";
+import { connectWallet, loadOnChainPositions, loadPositionsFromStorage, savePositionToStorage, closeLPPosition, fetchPositionPnL, type ExecutionResult, type PositionPnL } from "@/lib/solana";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import EmptyState from "@/components/EmptyState";
 import LoadingState from "@/components/LoadingState";
@@ -41,6 +41,8 @@ type Position = {
   capitalUSD: number;
   positionAddress?: string;
   poolAddress?: string;
+  pnl?: PositionPnL | null;
+  pnlLoading?: boolean;
 };
 
 let msgCounter = 0;
@@ -116,6 +118,36 @@ export default function AppPage() {
     setConnectedWallet(null);
     setWalletAdapter(null);
     setPositions([]);
+  };
+
+  const handleRefreshPnl = async (position: Position) => {
+    // Mark loading
+    setPositions(prev =>
+      prev.map(p => p.id === position.id ? { ...p, pnlLoading: true } : p)
+    );
+
+    try {
+      const poolAddr = position.poolAddress ?? "5rCf1DM8LjKTw4YqhnoLcngyZYeNnQqztScTogYHAS6";
+      const posAddr = position.positionAddress ?? position.signature;
+      const result = await fetchPositionPnL(poolAddr, posAddr, position.capitalUSD);
+
+      setPositions(prev =>
+        prev.map(p =>
+          p.id === position.id
+            ? { ...p, pnl: result, pnlLoading: false }
+            : p
+        )
+      );
+    } catch (err) {
+      console.error("[refreshPnl]", err);
+      setPositions(prev =>
+        prev.map(p =>
+          p.id === position.id
+            ? { ...p, pnlLoading: false }
+            : p
+        )
+      );
+    }
   };
 
   const handleSubmit = async () => {
@@ -430,7 +462,7 @@ export default function AppPage() {
 
         {/* RIGHT PANEL */}
         <div style={{ flex: 1, overflow: "hidden", position: "relative", display: "flex", flexDirection: "column" }}>
-          <PositionsPanel positions={positions} onWithdraw={handleWithdraw} />
+          <PositionsPanel positions={positions} onWithdraw={handleWithdraw} onRefreshPnl={handleRefreshPnl} />
           <div style={{ flex: 1, overflow: "auto", position: "relative" }}>
             <AnimatePresence mode="wait">
               {!simResult && !loading && (

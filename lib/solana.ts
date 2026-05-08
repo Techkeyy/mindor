@@ -184,6 +184,127 @@ async function getTokenPrices(mints: string[]): Promise<Map<string, number>> {
 }
 
 // ============================================================
+// P&L Dashboard — on-chain position value + fee tracking
+// ============================================================
+
+export type PositionPnL = {
+  currentValue: number       // current USD value of deposited tokens
+  unclaimedFees: number      // unclaimed fees in USD
+  claimedFees: number        // total claimed fees in USD
+  depositedValue: number     // capital put in (USD)
+  pnl: number                // net profit/loss in USD
+  roi: number                // ROI percentage
+  depositedX: number         // native units of token X
+  depositedY: number         // native units of token Y
+  symbolX: string
+  symbolY: string
+  error?: string
+}
+
+export async function fetchPositionPnL(
+  poolAddress: string,
+  positionAddress: string,
+  capitalUSD: number,
+): Promise<PositionPnL> {
+  try {
+    if (!isValidPoolAddress(poolAddress)) {
+      return zeroPnL(capitalUSD, 'Invalid pool address')
+    }
+    if (!isValidPoolAddress(positionAddress)) {
+      return zeroPnL(capitalUSD, 'Invalid position address')
+    }
+
+    const DLMM = (await import('@meteora-ag/dlmm')).default
+    const poolPubkey = new PublicKey(poolAddress)
+    const positionPubkey = new PublicKey(positionAddress)
+
+    console.log('[pnl] loading pool:', poolPubkey.toBase58())
+    const dlmmPool = await DLMM.create(connection, poolPubkey)
+
+    console.log('[pnl] reading position:', positionPubkey.toBase58())
+    const pos = await dlmmPool.getPosition(positionPubkey)
+    const pd = pos.positionData
+
+    if (!pd || !pd.totalXAmount || !pd.totalYAmount) {
+      return zeroPnL(capitalUSD, 'Empty position data')
+    }
+
+    const mintX = dlmmPool.tokenX.publicKey.toBase58()
+    const mintY = dlmmPool.tokenY.publicKey.toBase58()
+    const decimalsX = getTokenDecimals(mintX)
+    const decimalsY = getTokenDecimals(mintY)
+
+    // Parse deposited amounts from position data (strings)
+    const depositedXRaw = parseInt(pd.totalXAmount, 10) || 0
+    const depositedYRaw = parseInt(pd.totalYAmount, 10) || 0
+    const depositedX = depositedXRaw / Math.pow(10, decimalsX)
+    const depositedY = depositedYRaw / Math.pow(10, decimalsY)
+
+    // Parse fees (BN values)
+    const feeXRaw = pd.feeX?.toNumber() ?? 0
+    const feeYRaw = pd.feeY?.toNumber() ?? 0
+    const unclaimedX = feeXRaw / Math.pow(10, decimalsX)
+    const unclaimedY = feeYRaw / Math.pow(10, decimalsY)
+
+    const claimedX = (pd.totalClaimedFeeXAmount?.toNumber() ?? 0) / Math.pow(10, decimalsX)
+    const claimedY = (pd.totalClaimedFeeYAmount?.toNumber() ?? 0) / Math.pow(10, decimalsY)
+
+    // Get prices
+    const prices = await getTokenPrices([mintX, mintY])
+    const priceX = prices.get(mintX) ?? 1.0
+    const priceY = prices.get(mintY) ?? 1.0
+
+    // Calculate USD values
+    const currentValue = (depositedX * priceX) + (depositedY * priceY)
+    const unclaimedFees = (unclaimedX * priceX) + (unclaimedY * priceY)
+    const claimedFees = (claimedX * priceX) + (claimedY * priceY)
+    const totalValue = currentValue + unclaimedFees + claimedFees
+    const pnl = totalValue - capitalUSD
+    const roi = capitalUSD > 0 ? (pnl / capitalUSD) * 100 : 0
+
+    return {
+      currentValue,
+      unclaimedFees,
+      claimedFees,
+      depositedValue: capitalUSD,
+      pnl,
+      roi,
+      depositedX,
+      depositedY,
+      symbolX: mintToSymbol(mintX),
+      symbolY: mintToSymbol(mintY),
+    }
+  } catch (err: any) {
+    console.error('[pnl] fetchPositionPnL error:', err?.message ?? err)
+    return zeroPnL(capitalUSD, err?.message ?? 'Failed to fetch position data')
+  }
+}
+
+function mintToSymbol(mint: string): string {
+  if (mint === MINT_SOL) return 'SOL'
+  if (mint === MINT_USDC) return 'USDC'
+  if (mint === MINT_USDT) return 'USDT'
+  if (mint === MINT_JTO) return 'JTO'
+  return mint.slice(0, 6) + '...'
+}
+
+function zeroPnL(capital: number, error?: string): PositionPnL {
+  return {
+    currentValue: capital,
+    unclaimedFees: 0,
+    claimedFees: 0,
+    depositedValue: capital,
+    pnl: 0,
+    roi: 0,
+    depositedX: 0,
+    depositedY: 0,
+    symbolX: '?',
+    symbolY: '?',
+    error,
+  }
+}
+
+// ============================================================
 // LP Execution — opens a position in any supported DLMM pool
 // ============================================================
 
