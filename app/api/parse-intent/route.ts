@@ -22,11 +22,8 @@ export async function POST(req: NextRequest) {
 
     const apiKey = process.env.GROQ_API_KEY
     if (!apiKey || apiKey.trim() === '') {
-      console.error('[parse-intent] GROQ_API_KEY missing')
-      return NextResponse.json(
-        { error: 'GROQ_API_KEY not configured' },
-        { status: 500 }
-      )
+      console.error('[parse-intent] GROQ_API_KEY missing — using fallback')
+      return NextResponse.json(FALLBACK)
     }
 
     const client = new Groq({ apiKey })

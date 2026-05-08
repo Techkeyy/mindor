@@ -1,10 +1,10 @@
 "use client";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { StrategyCard as StrategyCardType, FeeSimulation } from "@/lib/simulation";
+import type { StrategyCard as StrategyCardType } from "@/lib/simulation";
 import type { Pool } from "@/lib/defillama";
 import type { ExecutionResult } from "@/lib/solana";
-import { simulateFees, simulateIL } from "@/lib/simulation";
+import { simulateFees } from "@/lib/simulation";
 import StrategyCardComponent from "./StrategyCard";
 import ILChart from "./ILChart";
 import ExecutionModal from "./ExecutionModal";
