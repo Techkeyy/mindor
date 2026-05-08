@@ -11,19 +11,10 @@ import {
 } from '@solana/web3.js'
 import BN from 'bn.js'
 
-const getRpcUrl = () => {
-  if (typeof window !== 'undefined') {
-    return process.env.NEXT_PUBLIC_SOLANA_RPC ?? 'https://mainnet.helius-rpc.com/?api-key=demo'
-  }
-  return process.env.NEXT_PUBLIC_SOLANA_RPC ?? 'https://api.mainnet-beta.solana.com'
-}
-
 export const connection = new Connection(
-  getRpcUrl(),
-  {
-    commitment: 'confirmed',
-    wsEndpoint: undefined,
-  }
+  process.env.NEXT_PUBLIC_SOLANA_RPC ??
+    clusterApiUrl('mainnet-beta'),
+  { commitment: 'confirmed' }
 )
 
 const KNOWN_POOLS: Record<string, string> = {
@@ -68,6 +59,7 @@ export async function connectWallet(): Promise<{
       return {
         wallet: null,
         address: null,
+        balance: 0,
         error: 'Phantom wallet not found. Install from phantom.app'
       }
     }
@@ -89,27 +81,12 @@ export async function connectWallet(): Promise<{
       return {
         wallet: null,
         address: null,
+        balance: 0,
         error: 'Wallet connected but no public key found.'
       }
     }
 
-    // Use Helius for balance check - avoids CORS
-    let balance = 0
-    try {
-      const balanceConn = new Connection(
-        process.env.NEXT_PUBLIC_SOLANA_RPC ??
-        'https://mainnet.helius-rpc.com/?api-key=demo',
-        'confirmed'
-      )
-      const lamports = await balanceConn.getBalance(
-        new PublicKey(address)
-      )
-      balance = lamports / LAMPORTS_PER_SOL
-    } catch {
-      balance = 0
-    }
-
-    return { wallet, address, balance }
+    return { wallet, address, balance: await getBalance(address) }
   } catch (err: any) {
     if (
       err?.message?.includes('User rejected') ||
@@ -118,6 +95,7 @@ export async function connectWallet(): Promise<{
       return {
         wallet: null,
         address: null,
+        balance: 0,
         error: 'Connection cancelled. Click Connect Phantom to try again.'
       }
     }
@@ -125,6 +103,7 @@ export async function connectWallet(): Promise<{
     return {
       wallet: null,
       address: null,
+      balance: 0,
       error: err?.message ?? String(err)
     }
   }
@@ -231,7 +210,7 @@ export async function executeLPPosition(
       await connection.getLatestBlockhash()
 
     console.log('[meteora] building initializePositionAndAddLiquidityByStrategy tx...')
-    const initPosTx = await dlmmPool.initializePositionAndAddLiquidityByStrategy({
+    const createPositionTx = await dlmmPool.initializePositionAndAddLiquidityByStrategy({
       positionPubKey: positionKeypair.publicKey,
       user: wallet.publicKey,
       totalXAmount: solLamports,
@@ -243,16 +222,27 @@ export async function executeLPPosition(
       },
     })
 
-    initPosTx.recentBlockhash = blockhash
-    initPosTx.feePayer = wallet.publicKey
-    initPosTx.partialSign(positionKeypair)
+    createPositionTx.recentBlockhash = blockhash
+    createPositionTx.feePayer = wallet.publicKey
+    createPositionTx.partialSign(positionKeypair)
 
-    const signedInitTx = await wallet.signTransaction(initPosTx)
+    const signedInitTx = await wallet.signTransaction(createPositionTx)
+
+    const initSigners = signedInitTx.signatures.filter(
+      s => s.signature !== null
+    )
+    console.log('[meteora] signatures count:', initSigners.length)
+    if (initSigners.length < 2) {
+      throw new Error(
+        'Transaction requires 2 signatures, got ' +
+        initSigners.length
+      )
+    }
 
     console.log('[meteora] sending initializePositionAndAddLiquidity...')
     const initSig = await connection.sendRawTransaction(
       (signedInitTx as Transaction).serialize(),
-      { skipPreflight: false }
+      { skipPreflight: false, maxRetries: 3 }
     )
 
     await connection.confirmTransaction({
@@ -311,6 +301,39 @@ export async function executeLPPosition(
   }
 }
 
+export function savePositionToStorage(
+  walletAddress: string,
+  position: {
+    address: string
+    tokenA: string
+    tokenB: string
+    protocol: string
+    feeApr: number
+    signature: string
+    explorerUrl: string
+    timestamp: Date
+    capitalUSD: number
+  }
+) {
+  try {
+    if (typeof window === 'undefined') return
+
+    const key = `mindor_positions_${walletAddress}`
+    const existing = JSON.parse(localStorage.getItem(key) ?? '[]')
+    const filtered = existing.filter(
+      (p: any) => p.address !== position.address
+    )
+    filtered.unshift(position)
+    localStorage.setItem(
+      key,
+      JSON.stringify(filtered.slice(0, 50))
+    )
+    console.log('[positions] saved to localStorage')
+  } catch (e) {
+    console.error('[positions] save error:', e)
+  }
+}
+
 async function devnetFallbackTx(
   wallet: WalletAdapter
 ): Promise<ExecutionResult> {
@@ -356,41 +379,6 @@ async function devnetFallbackTx(
   }
 }
 
-export function savePositionToStorage(
-  walletAddress: string,
-  position: {
-    address: string
-    tokenA: string
-    tokenB: string
-    protocol: string
-    feeApr: number
-    signature: string
-    explorerUrl: string
-    timestamp: Date
-    capitalUSD: number
-  }
-) {
-  try {
-    if (typeof window === 'undefined') return
-
-    const key = `mindor_positions_${walletAddress}`
-    const existing = JSON.parse(
-      localStorage.getItem(key) ?? '[]'
-    )
-    const filtered = existing.filter(
-      (p: any) => p.address !== position.address
-    )
-    filtered.unshift(position)
-    localStorage.setItem(
-      key,
-      JSON.stringify(filtered.slice(0, 50))
-    )
-    console.log('[positions] saved to localStorage')
-  } catch (e) {
-    console.error('[positions] save error:', e)
-  }
-}
-
 export async function loadOnChainPositions(
   walletAddress: string
 ): Promise<Array<{
@@ -404,114 +392,32 @@ export async function loadOnChainPositions(
   timestamp: Date
   capitalUSD: number
 }>> {
-  const results: Array<{
-    address: string
-    tokenA: string
-    tokenB: string
-    protocol: string
-    feeApr: number
-    signature: string
-    explorerUrl: string
-    timestamp: Date
-    capitalUSD: number
-  }> = []
-
   try {
     const DLMM = (await import('@meteora-ag/dlmm')).default
-    const dlmmAny = DLMM as any
     const owner = new PublicKey(walletAddress)
+    const pool = await DLMM.create(connection, new PublicKey('5rCf1DM8LjKTw4YqhnoLcngyZYeNnQqztScTogYHAS6'))
 
-    // Try loading from Meteora SDK first
-    try {
-      const getAllMethod = dlmmAny.getAllLbPairPositionsByUser
-        ?? dlmmAny.getPositionsByUserAndLbPair
+    const { userPositions } = await pool.getPositionsByUserAndLbPair(owner)
 
-      if (getAllMethod) {
-        const data = await getAllMethod(connection, owner)
+    if (!userPositions || userPositions.length === 0) return []
 
-        const posMap = data?.userPositions ?? data
-
-        if (posMap && typeof posMap.forEach === 'function') {
-          posMap.forEach((posData: any, key: any) => {
-            const pairKey = typeof key === 'string'
-              ? key
-              : key?.toBase58?.() ?? ''
-
-            const posArray = posData?.lbPairPositionsData
-              ?? posData?.positions
-              ?? (Array.isArray(posData) ? posData : [])
-
-            posArray.forEach((pos: any) => {
-              const addr = pos?.publicKey?.toBase58?.()
-                ?? pos?.address?.toBase58?.()
-                ?? pairKey
-
-              const mintX = posData?.lbPair?.tokenX?.mint
-                ?.toBase58?.() ?? ''
-              const mintY = posData?.lbPair?.tokenY?.mint
-                ?.toBase58?.() ?? ''
-
-              const tokenA = mintX.startsWith('So1111')
-                ? 'SOL'
-                : mintX.slice(0, 4)
-              const tokenB = mintY.startsWith('EPjFW')
-                ? 'USDC'
-                : mintY.startsWith('Es9v')
-                ? 'USDT'
-                : mintY.slice(0, 4)
-
-              results.push({
-                address: addr,
-                tokenA,
-                tokenB,
-                protocol: 'Meteora',
-                feeApr: 0,
-                signature: addr,
-                explorerUrl:
-                  `https://explorer.solana.com/address/${addr}`,
-                timestamp: new Date(),
-                capitalUSD: 0,
-              })
-            })
-          })
-        }
-      }
-      console.log('[positions] found', results.length,
-        'on-chain positions')
-    } catch (err: any) {
-      console.error('[positions] SDK error:', err?.message)
-    }
-  } catch (err: any) {
-    console.error('[positions] SDK load error:', err?.message)
+    return userPositions.map((pos: any) => ({
+      address: pos.publicKey?.toBase58() ?? '',
+      tokenA: 'SOL',
+      tokenB: 'USDC',
+      protocol: 'Meteora',
+      feeApr: 0,
+      signature: pos.publicKey?.toBase58() ?? '',
+      explorerUrl:
+        `https://explorer.solana.com/address/` +
+        `${pos.publicKey?.toBase58()}`,
+      timestamp: new Date(),
+      capitalUSD: 0,
+    }))
+  } catch (err) {
+    console.error('[solana] loadOnChainPositions:', err)
+    return []
   }
-
-  // ALWAYS merge with localStorage backup
-  try {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem(
-        `mindor_positions_${walletAddress}`
-      )
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        // Add stored positions not already in results
-        const existingIds = new Set(results.map(r => r.address))
-        parsed.forEach((p: any) => {
-          if (!existingIds.has(p.address)) {
-            results.push({
-              ...p,
-              timestamp: new Date(p.timestamp),
-            })
-          }
-        })
-        console.log('[positions] merged', parsed.length,
-          'stored positions')
-      }
-    }
-  } catch (e) {
-    console.error('[positions] localStorage error:', e)
-  }
-
-  return results
 }
 
 
