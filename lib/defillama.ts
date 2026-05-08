@@ -17,6 +17,36 @@ export type PoolDetail = Pool & {
   priceRange: { min: number; max: number; current: number }
 }
 
+// ============================================================
+// Pool address lookup — maps (protocol, tokenA, tokenB) →
+// real on-chain Solana pool addresses.
+// DefiLlama returns UUIDs, not chain addresses, so we maintain
+// this mapping for pools we support execution on.
+// ============================================================
+const KNOWN_POOL_ADDRESSES: Record<string, string> = {
+  // Meteora DLMM
+  'meteora:sol:usdc': '5rCf1DM8LjKTw4YqhnoLcngyZYeNnQqztScTogYHAS6',
+  'meteora:usdc:usdt': '9cQNX7kx5mGwMBGB8V3JVKB7WguwQSjB3ekjg1Z1s5Dm',
+  'meteora:sol:jto': '2po1ynXQhLL2XJ2AxfyYjK9nGTUFCpc9sqny4x7BG9Av',
+  // Orca Whirlpool
+  'orca:sol:usdc': 'Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4pcryoy2e7q',
+  'orca:usdc:usdt': '4fuUiYxTgzQ6g8dPDE5FjsoT7Gvm82KEWgrYQ5hny7rS',
+}
+
+function lookupPoolAddress(project: string, tokenA: string, tokenB: string): string {
+  const key = `${project.toLowerCase()}:${tokenA.toLowerCase()}:${tokenB.toLowerCase()}`
+  return KNOWN_POOL_ADDRESSES[key] ?? ''
+}
+
+/** Validate if a string looks like a Solana base58 address */
+export function isValidPoolAddress(addr: string): boolean {
+  // Solana addresses are base58, 32-44 characters
+  if (!addr || addr.length < 32 || addr.length > 44) return false
+  // Base58 charset — no 0, O, I, l
+  const BASE58 = /^[1-9A-HJ-NP-Za-km-z]+$/
+  return BASE58.test(addr)
+}
+
 // DefiLlama raw pool shape (partial)
 type LlamaPool = {
   pool: string
@@ -53,8 +83,10 @@ function mapPool(p: LlamaPool): Pool {
   const { tokenA, tokenB } = parseTokens(p.symbol)
   const ilRisk = classifyILRisk(p.symbol)
   const ilPenalty = ilRisk === 'low' ? 0.3 : ilRisk === 'medium' ? 4 : 12
+  // Try known address lookup first, fall back to DefiLlama UUID
+  const address = lookupPoolAddress(p.project, tokenA, tokenB) || p.pool
   return {
-    address: p.pool,
+    address,
     tokenA,
     tokenB,
     protocol: p.project.charAt(0).toUpperCase() + p.project.slice(1),
@@ -68,35 +100,35 @@ function mapPool(p: LlamaPool): Pool {
 
 const FALLBACK_POOLS: Pool[] = [
   {
-    address: 'fallback-meteora-sol-usdc',
+    address: '5rCf1DM8LjKTw4YqhnoLcngyZYeNnQqztScTogYHAS6',
     tokenA: 'SOL', tokenB: 'USDC',
     protocol: 'Meteora',
     feeApr: 28.4, volume24h: 4200000, tvl: 18000000,
     ilRisk: 'medium', netApr: 21.3
   },
   {
-    address: 'fallback-orca-usdc-usdt',
+    address: '4fuUiYxTgzQ6g8dPDE5FjsoT7Gvm82KEWgrYQ5hny7rS',
     tokenA: 'USDC', tokenB: 'USDT',
     protocol: 'Orca',
     feeApr: 8.2, volume24h: 980000, tvl: 42000000,
     ilRisk: 'low', netApr: 7.9
   },
   {
-    address: 'fallback-meteora-sol-jto',
+    address: '2po1ynXQhLL2XJ2AxfyYjK9nGTUFCpc9sqny4x7BG9Av',
     tokenA: 'SOL', tokenB: 'JTO',
     protocol: 'Meteora',
     feeApr: 67.3, volume24h: 1100000, tvl: 3200000,
     ilRisk: 'high', netApr: 44.1
   },
   {
-    address: 'fallback-orca-sol-usdc',
+    address: 'Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4pcryoy2e7q',
     tokenA: 'SOL', tokenB: 'USDC',
     protocol: 'Orca',
     feeApr: 19.7, volume24h: 2800000, tvl: 9500000,
     ilRisk: 'medium', netApr: 15.2
   },
   {
-    address: 'fallback-meteora-usdc-usdt',
+    address: '9cQNX7kx5mGwMBGB8V3JVKB7WguwQSjB3ekjg1Z1s5Dm',
     tokenA: 'USDC', tokenB: 'USDT',
     protocol: 'Meteora',
     feeApr: 6.8, volume24h: 750000, tvl: 31000000,

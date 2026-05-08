@@ -9,6 +9,7 @@ import {
   VersionedTransaction,
 } from '@solana/web3.js'
 import BN from 'bn.js'
+import { isValidPoolAddress } from './defillama'
 
 export const connection = new Connection(
   process.env.NEXT_PUBLIC_SOLANA_RPC ??
@@ -161,6 +162,11 @@ export async function executeLPPosition(
       poolPubkey = new PublicKey(poolAddress)
     } catch {
       return { success: false, error: `Invalid pool address: ${poolAddress}` }
+    }
+
+    // Extra guard: reject obviously fake addresses (DefiLlama UUIDs, etc.)
+    if (!isValidPoolAddress(poolAddress)) {
+      return { success: false, error: `Invalid Solana address: ${poolAddress}. This may be a data issue — try refreshing or check the pool.` }
     }
 
     console.log('[meteora] loading pool:', poolPubkey.toBase58())
