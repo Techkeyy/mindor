@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mindor — Editorial Artwork</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #FAFAFA;
+    font-family: 'Inter', sans-serif;
+    color: #1a1a1a;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 80px 60px 120px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 40px 60px;
+  }
+
+  /* Guide lines */
+  .page::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 60px; bottom: 0;
+    width: 1px;
+    background: rgba(0,0,0,0.06);
+    z-index: 0;
+  }
+  .page::after {
+    content: '';
+    position: fixed;
+    top: 0; right: 60px; bottom: 0;
+    width: 1px;
+    background: rgba(0,0,0,0.06);
+    z-index: 0;
+  }
+
+  .masthead {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+  }
+  .masthead-left { font-size: 10px; letter-spacing: 0.35em; color: #999; text-transform: uppercase; }
+  .masthead-right { font-size: 10px; color: #999; }
+
+  /* Main artwork area */
+  .artwork {
+    grid-column: 1;
+    grid-row: 2 / 4;
+    position: relative;
+    min-height: 800px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .artwork svg {
+    width: 100%;
+    height: auto;
+    max-height: 800px;
+  }
+
+  /* Liquid character SVG */
+  .character-container {
+    position: relative;
+    width: 100%;
+  }
+
+  /* Right column — editorial content */
+  .editorial-header {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: end;
+  }
+  .editorial-header .number {
+    font-family: 'Playfair Display', serif;
+    font-size: 72px;
+    line-height: 1;
+    color: #47B1BC;
+    margin-bottom: 8px;
+  }
+  .editorial-header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 48px;
+    font-weight: 400;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin-bottom: 16px;
+    color: #1a1a1a;
+  }
+  .editorial-header h1 em {
+    font-style: italic;
+    color: #2993A3;
+  }
+  .editorial-header .subtitle {
+    font-size: 14px;
+    line-height: 1.8;
+    color: #666;
+    max-width: 420px;
+  }
+
+  .editorial-body {
+    grid-column: 2;
+    grid-row: 3;
+    align-self: start;
+    margin-top: 40px;
+  }
+
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 40px;
+  }
+  .detail-card {
+    position: relative;
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 4px;
+    overflow: hidden;
+    aspect-ratio: 1;
+    background: #f5f5f5;
+  }
+  .detail-card svg {
+    width: 100%;
+    height: 100%;
+  }
+  .detail-label {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: #999;
+    text-transform: uppercase;
+    margin-top: 8px;
+  }
+
+  .notes {
+    border-top: 1px solid rgba(0,0,0,0.1);
+    padding-top: 24px;
+  }
+  .notes p {
+    font-size: 12px;
+    line-height: 1.9;
+    color: #888;
+    font-style: italic;
+    max-width: 360px;
+  }
+
+  .material-swatch {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-right: 24px;
+    margin-bottom: 8px;
+  }
+  .material-swatch .dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .material-swatch span {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: #666;
+  }
+
+  /* Noise texture overlay */
+  .noise {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+    opacity: 0.03;
+    z-index: 100;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+    background-size: 256px 256px;
+  }
+
+  @media (max-width: 900px) {
+    .page {
+      grid-template-columns: 1fr;
+      padding: 40px 24px 80px;
+      gap: 32px;
+    }
+    .artwork { grid-column: 1; grid-row: 2; min-height: 500px; }
+    .editorial-header { grid-column: 1; grid-row: 3; }
+    .editorial-body { grid-column: 1; grid-row: 4; }
+    .editorial-header h1 { font-size: 36px; }
+  }
+</style>
+</head>
+<body>
+<div class="noise"></div>
+
+<div class="page">
+  <!-- Masthead -->
+  <div class="masthead">
+    <div class="masthead-left">Mindor · Editorial Series №01</div>
+    <div class="masthead-right">Spring 2026</div>
+  </div>
+
+  <!-- Artwork -->
+  <div class="artwork">
+    <svg viewBox="0 0 600 860" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <!-- Liquid gradients -->
+        <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#47B1BC"/>
+          <stop offset="50%" stop-color="#62DBE2"/>
+          <stop offset="100%" stop-color="#2993A3"/>
+        </linearGradient>
+        <linearGradient id="g2" x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#1A7192"/>
+          <stop offset="50%" stop-color="#47B1BC"/>
+          <stop offset="100%" stop-color="#9ACFCF"/>
+        </linearGradient>
+        <linearGradient id="g3" x1="50%" y1="0%" x2="50%" y2="100%">
+          <stop offset="0%" stop-color="#62DBE2" stop-opacity="0.9"/>
+          <stop offset="100%" stop-color="#47B1BC" stop-opacity="0.3"/>
+        </linearGradient>
+        <linearGradient id="g4" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#2993A3"/>
+          <stop offset="100%" stop-color="#1A7192"/>
+        </linearGradient>
+        <radialGradient id="glow1" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#62DBE2" stop-opacity="0.4"/>
+          <stop offset="100%" stop-color="#62DBE2" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="glow2" cx="30%" cy="70%" r="60%">
+          <stop offset="0%" stop-color="#47B1BC" stop-opacity="0.3"/>
+          <stop offset="100%" stop-color="#47B1BC" stop-opacity="0"/>
+        </radialGradient>
+
+        <!-- Filters -->
+        <filter id="liquidBlur">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="1.5"/>
+        </filter>
+        <filter id="softGlow">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="6"/>
+          <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+
+        <!-- Liquid clip path -->
+        <clipPath id="characterClip">
+          <!-- Main figure silhouette -->
+          <path d="M220,860 L220,580 C220,510 240,460 270,420 C300,380 310,340 310,290 C310,240 320,200 340,170 C360,140 370,120 360,100 C350,80 330,70 310,65 C290,60 270,61 250,68 C230,75 215,87 205,100 C195,113 188,125 185,140 C182,155 180,175 182,195 C184,215 188,230 195,245 C202,260 208,275 210,290 C212,305 210,320 205,335 C200,350 198,365 200,380 C202,395 208,408 215,420 C222,432 228,445 232,460 C236,475 238,490 238,510 L238,860 Z"/>
+        </clipPath>
+
+        <!-- Liquid overflow clip (for flowing forms) -->
+        <clipPath id="liquidOverflow">
+          <path d="M185,140 C182,155 180,175 182,195 C184,215 188,230 195,245 C202,260 208,275 210,290 C212,305 210,320 205,335 C200,350 198,365 200,380 C202,395 208,408 215,420 C222,432 228,445 232,460 C236,475 238,490 238,510 L238,860 L120,860 L120,140 Z"/>
+        </clipPath>
+      </defs>
+
+      <!-- Background glow -->
+      <ellipse cx="280" cy="300" rx="250" ry="300" fill="url(#glow1)"/>
+      <ellipse cx="220" cy="550" rx="200" ry="200" fill="url(#glow2)"/>
+
+      <!-- Character body -->
+      <g clip-path="url(#characterClip)">
+        <!-- Base fill -->
+        <rect x="150" y="50" width="300" height="820" fill="#1a1a1a"/>
+
+        <!-- Highlight on torso -->
+        <path d="M200,250 C210,240 240,230 260,240 C280,250 275,270 265,285 C255,300 240,310 230,315 C220,320 210,315 205,300 C200,285 195,260 200,250 Z" fill="url(#g1)" opacity="0.7"/>
+
+        <!-- Liquid flowing down right side -->
+        <path d="M310,200 C330,210 340,240 345,270 C350,300 355,330 348,360 C341,390 330,410 325,430 C320,450 325,470 335,485 C345,500 358,510 365,525 C372,540 370,555 360,565 L280,565 C290,550 295,530 292,510 C289,490 282,475 278,460 C274,445 272,430 275,415 C278,400 285,385 290,370 C295,355 300,340 305,325 C310,310 312,295 310,280 C308,265 305,250 300,240 C295,230 300,215 310,200 Z" fill="url(#g2)" opacity="0.85"/>
+
+        <!-- Iridescent shoulder piece -->
+        <path d="M260,160 C275,150 295,148 310,155 C325,162 330,178 328,192 C326,206 310,215 295,212 C280,209 268,198 260,185 C252,172 248,168 260,160 Z" fill="url(#g1)" opacity="0.9"/>
+
+        <!-- Collar detail -->
+        <path d="M250,100 C265,88 285,85 300,90 C315,95 320,108 315,120 C310,132 295,135 280,132 C265,129 252,118 250,100 Z" fill="url(#g3)" opacity="0.8"/>
+
+        <!-- Suspended droplet 1 -->
+        <ellipse cx="345" cy="195" rx="6" ry="9" fill="url(#g1)" opacity="0.7" filter="url(#softGlow)"/>
+
+        <!-- Suspended droplet 2 -->
+        <ellipse cx="355" cy="225" rx="3.5" ry="5" fill="#62DBE2" opacity="0.6"/>
+      </g>
+
+      <!-- Liquid ribbon flowing out of the figure - right side -->
+      <path d="M360,565 C380,555 400,560 415,575 C430,590 435,615 425,635 C415,655 395,660 380,655 C365,650 358,638 360,620 C362,602 372,590 385,585 C398,580 410,582 415,590" fill="none" stroke="url(#g1)" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
+
+      <!-- Liquid pool at base -->
+      <ellipse cx="270" cy="855" rx="90" ry="18" fill="url(#g2)" opacity="0.5" filter="url(#liquidBlur)"/>
+      <ellipse cx="280" cy="853" rx="60" ry="12" fill="url(#g1)" opacity="0.35"/>
+
+      <!-- Reflective highlight on pool -->
+      <ellipse cx="260" cy="850" rx="30" ry="5" fill="#62DBE2" opacity="0.25"/>
+
+      <!-- Floating liquid droplets around the figure -->
+      <circle cx="380" cy="480" r="2.5" fill="#62DBE2" opacity="0.5"/>
+      <circle cx="395" cy="510" r="1.8" fill="#47B1BC" opacity="0.4"/>
+      <circle cx="370" cy="540" r="3" fill="#9ACFCF" opacity="0.35"/>
+      <circle cx="400" cy="440" r="1.5" fill="#62DBE2" opacity="0.45"/>
+      <circle cx="120" cy="380" r="2" fill="#47B1BC" opacity="0.3"/>
+
+      <!-- Stretched liquid surface left side -->
+      <path d="M195,330 C180,335 168,345 160,360 C152,375 150,395 158,410 C166,425 180,432 192,428 C204,424 210,412 208,400 C206,388 200,376 195,365 C190,354 190,340 195,330 Z" fill="url(#g3)" opacity="0.4"/>
+
+      <!-- Editorial guide marks -->
+      <line x1="40" y1="300" x2="140" y2="300" stroke="rgba(0,0,0,0.08)" stroke-width="0.5"/>
+      <line x1="40" y1="500" x2="140" y2="500" stroke="rgba(0,0,0,0.08)" stroke-width="0.5"/>
+      <line x1="460" y1="200" x2="560" y2="200" stroke="rgba(0,0,0,0.08)" stroke-width="0.5"/>
+
+      <!-- Annotation lines -->
+      <line x1="180" y1="420" x2="100" y2="420" stroke="rgba(0,0,0,0.15)" stroke-width="0.5" stroke-dasharray="3,3"/>
+      <circle cx="180" cy="420" r="2" fill="#47B1BC"/>
+      <text x="92" y="416" font-family="Inter" font-size="8" fill="#999" letter-spacing="0.15em">RESIN TRANSITION</text>
+
+      <line x1="328" y1="192" x2="440" y2="192" stroke="rgba(0,0,0,0.15)" stroke-width="0.5" stroke-dasharray="3,3"/>
+      <circle cx="328" cy="192" r="2" fill="#62DBE2"/>
+      <text x="370" y="188" font-family="Inter" font-size="8" fill="#999" letter-spacing="0.15em">PEARL GLAZE</text>
+    </svg>
+  </div>
+
+  <!-- Editorial header -->
+  <div class="editorial-header">
+    <div class="number">01</div>
+    <h1>Liquid <em>Resin</em><br/>Collection</h1>
+    <p class="subtitle">
+      An exploration of controlled material transformation — where structured form meets fluid motion.
+      Iridescent lacquer flows across architectural silhouettes in suspended animation.
+    </p>
+  </div>
+
+  <!-- Editorial body with detail insets -->
+  <div class="editorial-body">
+    <div class="detail-grid">
+      <div>
+        <div class="detail-card">
+          <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="ds1" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#47B1BC"/>
+                <stop offset="100%" stop-color="#1A7192"/>
+              </linearGradient>
+            </defs>
+            <rect width="200" height="200" fill="#f8f8f8"/>
+            <!-- Fabric texture study -->
+            <path d="M20,100 Q50,80 80,100 Q110,120 140,100 Q170,80 180,95" stroke="url(#ds1)" stroke-width="1.5" fill="none" opacity="0.4"/>
+            <path d="M20,115 Q50,95 80,115 Q110,135 140,115 Q170,95 180,110" stroke="url(#ds1)" stroke-width="1" fill="none" opacity="0.3"/>
+            <path d="M20,130 Q50,110 80,130 Q110,150 140,130 Q170,110 180,125" stroke="url(#ds1)" stroke-width="0.8" fill="none" opacity="0.2"/>
+            <circle cx="100" cy="100" r="12" fill="url(#ds1)" opacity="0.08"/>
+            <circle cx="100" cy="100" r="4" fill="#47B1BC" opacity="0.3"/>
+          </svg>
+        </div>
+        <div class="detail-label">Textile Surface</div>
+      </div>
+      <div>
+        <div class="detail-card">
+          <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <radialGradient id="ds2" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#62DBE2" stop-opacity="0.6"/>
+                <stop offset="100%" stop-color="#62DBE2" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <rect width="200" height="200" fill="#fafafa"/>
+            <!-- Droplet study -->
+            <ellipse cx="100" cy="90" rx="18" ry="24" fill="url(#ds2)"/>
+            <ellipse cx="100" cy="82" rx="8" ry="3" fill="white" opacity="0.4"/>
+            <ellipse cx="80" cy="150" rx="10" ry="14" fill="url(#ds2)" opacity="0.7"/>
+            <ellipse cx="80" cy="144" rx="5" ry="2" fill="white" opacity="0.35"/>
+            <ellipse cx="130" cy="140" rx="6" ry="8" fill="url(#ds2)" opacity="0.5"/>
+          </svg>
+        </div>
+        <div class="detail-label">Lacquer Droplets</div>
+      </div>
+      <div>
+        <div class="detail-card">
+          <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="ds3" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#2993A3"/>
+                <stop offset="50%" stop-color="#47B1BC"/>
+                <stop offset="100%" stop-color="#9ACFCF"/>
+              </linearGradient>
+            </defs>
+            <rect width="200" height="200" fill="#f5f5f5"/>
+            <!-- Jewelry / hardware detail -->
+            <rect x="75" y="60" width="50" height="80" rx="25" fill="none" stroke="url(#ds3)" stroke-width="2"/>
+            <rect x="85" y="70" width="30" height="60" rx="15" fill="url(#ds3)" opacity="0.15"/>
+            <circle cx="100" cy="100" r="8" fill="url(#ds3)" opacity="0.4"/>
+            <circle cx="100" cy="100" r="4" fill="#62DBE2" opacity="0.6"/>
+          </svg>
+        </div>
+        <div class="detail-label">Hardware Finish</div>
+      </div>
+      <div>
+        <div class="detail-card">
+          <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <rect width="200" height="200" fill="#f8f8f8"/>
+            <!-- Iridescent material swatch -->
+            <rect x="30" y="30" width="140" height="140" rx="8" fill="none"/>
+            <path d="M30,100 Q80,60 170,100" stroke="#47B1BC" stroke-width="60" opacity="0.08"/>
+            <path d="M30,100 Q80,80 170,100" stroke="#62DBE2" stroke-width="40" opacity="0.12"/>
+            <path d="M30,100 Q80,95 170,100" stroke="#2993A3" stroke-width="20" opacity="0.15"/>
+            <circle cx="100" cy="100" r="30" fill="none" stroke="#9ACFCF" stroke-width="0.5" opacity="0.3"/>
+            <circle cx="100" cy="100" r="20" fill="#62DBE2" opacity="0.06"/>
+          </svg>
+        </div>
+        <div class="detail-label">Iridescent Finish</div>
+      </div>
+    </div>
+
+    <!-- Material swatches -->
+    <div style="margin-bottom: 20px;">
+      <div class="material-swatch"><div class="dot" style="background:#47B1BC"></div><span>TEAL LACQUER</span></div>
+      <div class="material-swatch"><div class="dot" style="background:#62DBE2"></div><span>CYAN PEARL</span></div>
+      <div class="material-swatch"><div class="dot" style="background:#2993A3"></div><span>DEEP RESIN</span></div>
+      <div class="material-swatch"><div class="dot" style="background:#9ACFCF"></div><span>PALE AQUA</span></div>
+    </div>
+
+    <!-- Notes -->
+    <div class="notes">
+      <p>
+        Part of the inaugural Mindor editorial series exploring the tension between structure and fluidity.
+        Each piece captures a moment of controlled transformation — where material identity shifts
+        from defined form to liquid expression.
+      </p>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
