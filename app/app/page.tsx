@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Pool } from "@/lib/defillama";
 import type { StrategyCard } from "@/lib/simulation";
-import { connectWallet, loadOnChainPositions, loadPositionsFromStorage, savePositionToStorage, closeLPPosition, fetchPositionPnL, type ExecutionResult, type PositionPnL } from "@/lib/solana";
+import { connectWallet, loadOnChainPositions, loadPositionsFromStorage, savePositionToStorage, removePositionFromStorage, closeLPPosition, fetchPositionPnL, type ExecutionResult, type PositionPnL } from "@/lib/solana";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import EmptyState from "@/components/EmptyState";
 import LoadingState from "@/components/LoadingState";
@@ -275,12 +275,22 @@ export default function AppPage() {
       const result = await closeLPPosition(walletAdapter, posAddr, poolAddr);
       if (result.success) {
         setPositions(prev => prev.filter(p => p.id !== position.id));
+        if (connectedWallet) {
+          removePositionFromStorage(connectedWallet, position.id);
+        }
         alert("Position closed! View tx: " + (result.explorerUrl ?? ""));
       } else {
         alert("Withdrawal failed: " + (result.error ?? "unknown error"));
       }
     } catch (err: any) {
       alert("Withdrawal error: " + (err?.message ?? String(err)));
+    }
+  };
+
+  const handleDismiss = (position: Position) => {
+    setPositions(prev => prev.filter(p => p.id !== position.id));
+    if (connectedWallet) {
+      removePositionFromStorage(connectedWallet, position.id);
     }
   };
 
@@ -462,7 +472,7 @@ export default function AppPage() {
 
         {/* RIGHT PANEL */}
         <div style={{ flex: 1, overflow: "hidden", position: "relative", display: "flex", flexDirection: "column" }}>
-          <PositionsPanel positions={positions} onWithdraw={handleWithdraw} onRefreshPnl={handleRefreshPnl} />
+          <PositionsPanel positions={positions} onWithdraw={handleWithdraw} onRefreshPnl={handleRefreshPnl} onDismiss={handleDismiss} />
           <div style={{ flex: 1, overflow: "auto", position: "relative" }}>
             <AnimatePresence mode="wait">
               {!simResult && !loading && (

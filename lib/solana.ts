@@ -664,6 +664,24 @@ export function loadPositionsFromStorage(walletAddress: string): Array<{
   }
 }
 
+export function removePositionFromStorage(
+  walletAddress: string,
+  positionId: string,
+) {
+  try {
+    if (typeof window === 'undefined') return
+    const key = `mindor_positions_${walletAddress}`
+    const existing = JSON.parse(localStorage.getItem(key) ?? '[]')
+    const filtered = existing.filter(
+      (p: any) => p.address !== positionId && p.signature !== positionId
+    )
+    localStorage.setItem(key, JSON.stringify(filtered))
+    console.log('[positions] removed from localStorage:', positionId)
+  } catch (e) {
+    console.error('[positions] remove error:', e)
+  }
+}
+
 export async function loadOnChainPositions(
   walletAddress: string,
   poolAddress?: string,

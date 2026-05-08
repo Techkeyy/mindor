@@ -22,6 +22,7 @@ type PositionsPanelProps = {
   positions: Position[];
   onWithdraw?: (position: Position) => void;
   onRefreshPnl?: (position: Position) => void;
+  onDismiss?: (position: Position) => void;
 };
 
 const currency = (n: number) =>
@@ -48,6 +49,7 @@ export default function PositionsPanel({
   positions,
   onWithdraw,
   onRefreshPnl,
+  onDismiss,
 }: PositionsPanelProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
@@ -432,10 +434,33 @@ export default function PositionsPanel({
                               fontFamily: "monospace",
                               letterSpacing: "0.1em",
                               cursor: "pointer",
-                              marginLeft: "auto",
                             }}
                           >
                             WITHDRAW
+                          </button>
+                        )}
+
+                        {/* Dismiss (remove from dashboard only — no on-chain tx) */}
+                        {onDismiss && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDismiss(pos);
+                            }}
+                            style={{
+                              padding: "6px 14px",
+                              borderRadius: 6,
+                              border: "1px solid var(--border-subtle)",
+                              background: "transparent",
+                              color: "var(--text-muted)",
+                              fontSize: 10,
+                              fontFamily: "monospace",
+                              letterSpacing: "0.1em",
+                              cursor: "pointer",
+                              marginLeft: "auto",
+                            }}
+                          >
+                            DISMISS
                           </button>
                         )}
                       </div>
