@@ -605,6 +605,80 @@ export async function closeLPPosition(
 }
 
 // ============================================================
+// Claim swap fees from a position (Meteora DLMM only)
+// ============================================================
+
+export async function claimPositionFees(
+  wallet: WalletAdapter,
+  poolAddress: string,
+  positionAddress: string,
+): Promise<ExecutionResult> {
+  try {
+    if (!wallet.publicKey) {
+      return { success: false, error: 'Wallet not connected' }
+    }
+
+    const protocol = getPoolProtocol(poolAddress)
+    if (protocol !== 'meteora') {
+      return { success: false, error: 'Fee claiming only supported for Meteora DLMM pools.' }
+    }
+
+    const DLMM = (await import('@meteora-ag/dlmm')).default
+    const poolPubkey = new PublicKey(poolAddress)
+    const positionPubkey = new PublicKey(positionAddress)
+
+    const dlmmPool = await DLMM.create(connection, poolPubkey)
+    const lbPosition = await dlmmPool.getPosition(positionPubkey)
+
+    const txs = await dlmmPool.claimSwapFee({
+      owner: wallet.publicKey,
+      position: lbPosition,
+    })
+
+    if (!txs || txs.length === 0) {
+      return { success: false, error: 'No fees to claim' }
+    }
+
+    const { blockhash, lastValidBlockHeight } =
+      await connection.getLatestBlockhash()
+
+    // Sign and send all claim transactions
+    let finalSig = ''
+    for (const tx of txs) {
+      tx.recentBlockhash = blockhash
+      tx.feePayer = wallet.publicKey
+
+      const signedTx = await wallet.signTransaction(tx)
+      const sig = await connection.sendRawTransaction(
+        (signedTx as Transaction).serialize(),
+        { skipPreflight: false, maxRetries: 3 }
+      )
+      await connection.confirmTransaction({
+        signature: sig,
+        blockhash,
+        lastValidBlockHeight,
+      })
+      finalSig = sig
+      console.log('[claim] fee tx confirmed:', sig)
+    }
+
+    return {
+      success: true,
+      signature: finalSig,
+      explorerUrl: `https://explorer.solana.com/tx/${finalSig}`,
+      poolAddress: poolPubkey.toBase58(),
+    }
+  } catch (err: any) {
+    const msg = err?.message ?? String(err)
+    console.error('[mindor] claim fees failed:', msg)
+    if (msg.includes('No fee')) {
+      return { success: false, error: 'No unclaimed fees on this position.' }
+    }
+    return { success: false, error: msg }
+  }
+}
+
+// ============================================================
 // Position storage (localStorage + on-chain)
 // ============================================================
 
@@ -682,9 +756,15 @@ export function removePositionFromStorage(
   }
 }
 
+// Meteora pool addresses we scan for user positions
+const METOORA_POOLS = [
+  { address: '5rCf1DM8LjKTw4YqhnoLcngyZYeNnQqztScTogYHAS6', tokenA: 'SOL',  tokenB: 'USDC' },
+  { address: '9cQNX7kx5mGwMBGB8V3JVKB7WguwQSjB3ekjg1Z1s5Dm', tokenA: 'USDC', tokenB: 'USDT' },
+  { address: '2po1ynXQhLL2XJ2AxfyYjK9nGTUFCpc9sqny4x7BG9Av', tokenA: 'SOL',  tokenB: 'JTO'  },
+]
+
 export async function loadOnChainPositions(
   walletAddress: string,
-  poolAddress?: string,
 ): Promise<Array<{
   address: string
   tokenA: string
@@ -699,19 +779,33 @@ export async function loadOnChainPositions(
   try {
     const DLMM = (await import('@meteora-ag/dlmm')).default
     const owner = new PublicKey(walletAddress)
-    const poolPubkey = new PublicKey(
-      poolAddress ?? '5rCf1DM8LjKTw4YqhnoLcngyZYeNnQqztScTogYHAS6'
-    )
-    const pool = await DLMM.create(connection, poolPubkey)
+    const allPositions: Array<any> = []
 
-    const { userPositions } = await pool.getPositionsByUserAndLbPair(owner)
+    // Scan all known Meteora pools for user positions
+    for (const { address, tokenA, tokenB } of METOORA_POOLS) {
+      try {
+        const poolPubkey = new PublicKey(address)
+        console.log('[pos-scan] scanning pool:', address.slice(0, 8), '...', tokenA, '/', tokenB)
+        const pool = await DLMM.create(connection, poolPubkey)
+        const { userPositions } = await pool.getPositionsByUserAndLbPair(owner)
 
-    if (!userPositions || userPositions.length === 0) return []
+        if (userPositions && userPositions.length > 0) {
+          console.log(`[pos-scan] found ${userPositions.length} positions in ${tokenA}/${tokenB}`)
+          for (const pos of userPositions) {
+            allPositions.push({ ...pos, _poolTokenA: tokenA, _poolTokenB: tokenB, _poolAddress: address })
+          }
+        }
+      } catch (poolErr) {
+        console.warn(`[pos-scan] pool ${address.slice(0, 8)}... failed:`, poolErr)
+      }
+    }
 
-    return userPositions.map((pos: any) => ({
+    if (allPositions.length === 0) return []
+
+    return allPositions.map((pos: any) => ({
       address: pos.publicKey?.toBase58() ?? '',
-      tokenA: 'SOL',
-      tokenB: 'USDC',
+      tokenA: pos._poolTokenA ?? 'SOL',
+      tokenB: pos._poolTokenB ?? 'USDC',
       protocol: 'Meteora',
       feeApr: 0,
       signature: pos.publicKey?.toBase58() ?? '',
@@ -720,6 +814,7 @@ export async function loadOnChainPositions(
         `${pos.publicKey?.toBase58()}`,
       timestamp: new Date(),
       capitalUSD: 0,
+      poolAddress: pos._poolAddress,
     }))
   } catch (err) {
     console.error('[solana] loadOnChainPositions:', err)

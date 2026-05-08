@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Pool } from "@/lib/defillama";
 import type { StrategyCard } from "@/lib/simulation";
-import { connectWallet, loadOnChainPositions, loadPositionsFromStorage, savePositionToStorage, removePositionFromStorage, closeLPPosition, fetchPositionPnL, type ExecutionResult, type PositionPnL } from "@/lib/solana";
+import { connectWallet, loadOnChainPositions, loadPositionsFromStorage, savePositionToStorage, removePositionFromStorage, closeLPPosition, claimPositionFees, fetchPositionPnL, type ExecutionResult, type PositionPnL } from "@/lib/solana";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import EmptyState from "@/components/EmptyState";
 import LoadingState from "@/components/LoadingState";
@@ -294,6 +294,27 @@ export default function AppPage() {
     }
   };
 
+  const handleClaimFees = async (position: Position) => {
+    if (!walletAdapter) {
+      alert("Connect your wallet first.");
+      return;
+    }
+    const poolAddr = position.poolAddress ?? "5rCf1DM8LjKTw4YqhnoLcngyZYeNnQqztScTogYHAS6";
+    const posAddr = position.positionAddress ?? position.signature;
+    try {
+      const result = await claimPositionFees(walletAdapter, poolAddr, posAddr);
+      if (result.success) {
+        alert("Fees claimed! View tx: " + (result.explorerUrl ?? ""));
+        // Refresh P&L after claiming
+        handleRefreshPnl(position);
+      } else {
+        alert("Claim failed: " + (result.error ?? "unknown error"));
+      }
+    } catch (err: any) {
+      alert("Claim error: " + (err?.message ?? String(err)));
+    }
+  };
+
   return (
     <ErrorBoundary>
     <div style={{
@@ -322,6 +343,9 @@ export default function AppPage() {
           <div style={{ fontSize: 10, color: "var(--text-muted)", letterSpacing: "0.2em", fontFamily: "monospace" }}>
             SIMULATION TERMINAL
           </div>
+          <span style={{ fontSize: 9, color: "#22C55E", fontFamily: "monospace", padding: "2px 8px", borderRadius: 4, background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }}>
+            0% FEES
+          </span>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#22C55E", boxShadow: "0 0 8px #22C55E" }} />
             <span style={{ fontSize: 9, color: "var(--text-muted)", letterSpacing: "0.2em", fontFamily: "monospace" }}>LIVE</span>
@@ -372,9 +396,9 @@ export default function AppPage() {
       </div>
 
       {/* Main split panel */}
-      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+      <div className="mindor-main-panels" style={{ flex: 1, display: "flex", overflow: "hidden" }}>
         {/* LEFT PANEL */}
-        <div style={{
+        <div className="mindor-left-panel" style={{
           width: 380, flexShrink: 0, display: "flex", flexDirection: "column",
           background: "var(--bg-surface)", borderRight: "1px solid var(--border-subtle)",
         }}>
@@ -471,8 +495,8 @@ export default function AppPage() {
         </div>
 
         {/* RIGHT PANEL */}
-        <div style={{ flex: 1, overflow: "hidden", position: "relative", display: "flex", flexDirection: "column" }}>
-          <PositionsPanel positions={positions} onWithdraw={handleWithdraw} onRefreshPnl={handleRefreshPnl} onDismiss={handleDismiss} />
+        <div className="mindor-right-panel" style={{ flex: 1, overflow: "hidden", position: "relative", display: "flex", flexDirection: "column" }}>
+          <PositionsPanel positions={positions} onWithdraw={handleWithdraw} onRefreshPnl={handleRefreshPnl} onDismiss={handleDismiss} onClaimFees={handleClaimFees} />
           <div style={{ flex: 1, overflow: "auto", position: "relative" }}>
             <AnimatePresence mode="wait">
               {!simResult && !loading && (
@@ -500,6 +524,23 @@ export default function AppPage() {
         </div>
       </div>
     </div>
+    <style dangerouslySetInnerHTML={{ __html: `
+      /* Mobile: stack panels vertically */
+      @media (max-width: 768px) {
+        .mindor-main-panels {
+          flex-direction: column !important;
+        }
+        .mindor-left-panel {
+          width: 100% !important;
+          max-height: 45vh !important;
+          flex-shrink: 1 !important;
+        }
+        .mindor-right-panel {
+          flex: 1 !important;
+          min-height: 55vh !important;
+        }
+      }
+    `}} />
     </ErrorBoundary>
   );
 }

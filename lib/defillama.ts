@@ -117,25 +117,11 @@ const FALLBACK_POOLS: Pool[] = [
     ilRisk: 'medium', netApr: 21.3
   },
   {
-    address: '4fuUiYxTgzQ6g8dPDE5FjsoT7Gvm82KEWgrYQ5hny7rS',
-    tokenA: 'USDC', tokenB: 'USDT',
-    protocol: 'Orca',
-    feeApr: 8.2, volume24h: 980000, tvl: 42000000,
-    ilRisk: 'low', netApr: 7.9
-  },
-  {
     address: '2po1ynXQhLL2XJ2AxfyYjK9nGTUFCpc9sqny4x7BG9Av',
     tokenA: 'SOL', tokenB: 'JTO',
     protocol: 'Meteora',
     feeApr: 67.3, volume24h: 1100000, tvl: 3200000,
     ilRisk: 'high', netApr: 44.1
-  },
-  {
-    address: 'Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4pcryoy2e7q',
-    tokenA: 'SOL', tokenB: 'USDC',
-    protocol: 'Orca',
-    feeApr: 19.7, volume24h: 2800000, tvl: 9500000,
-    ilRisk: 'medium', netApr: 15.2
   },
   {
     address: '9cQNX7kx5mGwMBGB8V3JVKB7WguwQSjB3ekjg1Z1s5Dm',
@@ -156,11 +142,11 @@ export async function fetchTopPools(
 
     const { data }: { data: LlamaPool[] } = await res.json()
 
-    // Filter: Solana only, Meteora or Orca, min $100k TVL,
+    // Filter: Solana only, Meteora only (executable), min $100k TVL,
     // positive APY, valid symbol with hyphen
     const solana = data.filter(p =>
       p.chain === 'Solana' &&
-      ['meteora', 'orca'].includes(p.project.toLowerCase()) &&
+      p.project.toLowerCase() === 'meteora' &&
       p.tvlUsd > 100000 &&
       (p.apyBase ?? p.apy ?? 0) > 0 &&
       p.symbol.includes('-')

@@ -23,6 +23,7 @@ type PositionsPanelProps = {
   onWithdraw?: (position: Position) => void;
   onRefreshPnl?: (position: Position) => void;
   onDismiss?: (position: Position) => void;
+  onClaimFees?: (position: Position) => void;
 };
 
 const currency = (n: number) =>
@@ -50,6 +51,7 @@ export default function PositionsPanel({
   onWithdraw,
   onRefreshPnl,
   onDismiss,
+  onClaimFees,
 }: PositionsPanelProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
@@ -416,6 +418,29 @@ export default function PositionsPanel({
                         >
                           ↗ EXPLORER
                         </a>
+
+                        {/* Claim Fees */}
+                        {onClaimFees && pos.pnl && pos.pnl.unclaimedFees > 0 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onClaimFees(pos);
+                            }}
+                            style={{
+                              padding: "6px 14px",
+                              borderRadius: 6,
+                              border: "1px solid #FBBF24",
+                              background: "transparent",
+                              color: "#FBBF24",
+                              fontSize: 10,
+                              fontFamily: "monospace",
+                              letterSpacing: "0.1em",
+                              cursor: "pointer",
+                            }}
+                          >
+                            CLAIM ${pos.pnl.unclaimedFees.toFixed(2)}
+                          </button>
+                        )}
 
                         {/* Withdraw */}
                         {onWithdraw && (
