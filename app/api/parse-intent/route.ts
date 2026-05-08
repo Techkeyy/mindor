@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Groq from 'groq-sdk'
+import OpenAI from 'openai'
 import { INTENT_SYSTEM_PROMPT, ParsedIntent } from '@/lib/prompts'
 
 const FALLBACK: ParsedIntent = {
@@ -20,16 +20,19 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const apiKey = process.env.GROQ_API_KEY
+    const apiKey = process.env.DEEPSEEK_API_KEY
     if (!apiKey || apiKey.trim() === '') {
-      console.error('[parse-intent] GROQ_API_KEY missing — using fallback')
+      console.error('[parse-intent] DEEPSEEK_API_KEY missing — using fallback')
       return NextResponse.json(FALLBACK)
     }
 
-    const client = new Groq({ apiKey })
+    const client = new OpenAI({
+      apiKey,
+      baseURL: 'https://api.deepseek.com/v1',
+    })
 
     const completion = await client.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+      model: 'deepseek-chat',
       max_tokens: 256,
       messages: [
         { role: 'system', content: INTENT_SYSTEM_PROMPT },
@@ -46,7 +49,7 @@ export async function POST(req: NextRequest) {
       !['low', 'medium', 'high'].includes(parsed.riskProfile) ||
       typeof parsed.durationDays !== 'number' ||
       typeof parsed.summary !== 'string'
-    ) throw new Error('Invalid shape from Groq')
+    ) throw new Error('Invalid shape from DeepSeek')
 
     return NextResponse.json(parsed)
 
