@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Pool } from "@/lib/defillama";
 import type { StrategyCard } from "@/lib/simulation";
-import { connectWallet, loadOnChainPositions, savePositionToStorage, closeLPPosition, type ExecutionResult } from "@/lib/solana";
+import { connectWallet, loadOnChainPositions, loadPositionsFromStorage, savePositionToStorage, closeLPPosition, type ExecutionResult } from "@/lib/solana";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import EmptyState from "@/components/EmptyState";
 import LoadingState from "@/components/LoadingState";
@@ -64,20 +64,33 @@ export default function AppPage() {
 
   const loadPositionsForWallet = async (address: string) => {
     try {
-      const onChain = await loadOnChainPositions(address);
-      setPositions(onChain.map(position => ({
-        id: position.address,
-        tokenA: position.tokenA,
-        tokenB: position.tokenB,
-        protocol: position.protocol,
-        feeApr: position.feeApr,
-        signature: position.signature,
-        explorerUrl: position.explorerUrl,
-        timestamp: position.timestamp,
-        capitalUSD: position.capitalUSD,
-      })));
+      // Load from localStorage first (instant, offline-safe)
+      const stored = loadPositionsFromStorage(address)
+      if (stored.length > 0) {
+        setPositions(stored.map(p => ({
+          ...p,
+          id: p.address || p.signature,
+          timestamp: new Date(p.timestamp),
+        })))
+      }
+
+      // Also try on-chain (may overwrite with fresher data)
+      const onChain = await loadOnChainPositions(address)
+      if (onChain.length > 0) {
+        setPositions(onChain.map(position => ({
+          id: position.address,
+          tokenA: position.tokenA,
+          tokenB: position.tokenB,
+          protocol: position.protocol,
+          feeApr: position.feeApr,
+          signature: position.signature,
+          explorerUrl: position.explorerUrl,
+          timestamp: position.timestamp,
+          capitalUSD: position.capitalUSD,
+        })))
+      }
     } catch (err) {
-      console.error("Failed to load on-chain positions:", err);
+      console.error("Failed to load positions:", err)
     }
   };
 
@@ -97,6 +110,12 @@ export default function AppPage() {
     } finally {
       setWalletConnecting(false);
     }
+  };
+
+  const handleDisconnect = () => {
+    setConnectedWallet(null);
+    setWalletAdapter(null);
+    setPositions([]);
   };
 
   const handleSubmit = async () => {
@@ -267,19 +286,42 @@ export default function AppPage() {
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <button onClick={handleWalletConnect} disabled={walletConnecting}
-            style={{
-              padding: "6px 12px", borderRadius: 8,
-              border: connectedWallet ? "1px solid var(--accent-primary)44" : "1px solid var(--accent-primary)",
-              background: "transparent",
-              color: connectedWallet ? "var(--text-muted)" : "var(--accent-primary)",
-              fontSize: 10, letterSpacing: "0.16em", fontFamily: "monospace",
-              cursor: walletConnecting ? "not-allowed" : "pointer",
-            }}>
-            {connectedWallet
-              ? `${connectedWallet.slice(0, 4)}...${connectedWallet.slice(-4)}`
-              : walletConnecting ? "CONNECTING..." : "CONNECT WALLET"}
-          </button>
+          {connectedWallet ? (
+            <>
+              <span style={{
+                padding: "6px 12px", borderRadius: 8,
+                border: "1px solid var(--accent-primary)44",
+                background: "transparent",
+                color: "var(--text-muted)",
+                fontSize: 10, letterSpacing: "0.16em", fontFamily: "monospace",
+              }}>
+                {connectedWallet.slice(0, 4)}...{connectedWallet.slice(-4)}
+              </span>
+              <button onClick={handleDisconnect}
+                style={{
+                  padding: "6px 12px", borderRadius: 8,
+                  border: "1px solid var(--accent-danger)",
+                  background: "transparent",
+                  color: "var(--accent-danger)",
+                  fontSize: 10, letterSpacing: "0.16em", fontFamily: "monospace",
+                  cursor: "pointer",
+                }}>
+                DISCONNECT
+              </button>
+            </>
+          ) : (
+            <button onClick={handleWalletConnect} disabled={walletConnecting}
+              style={{
+                padding: "6px 12px", borderRadius: 8,
+                border: "1px solid var(--accent-primary)",
+                background: "transparent",
+                color: "var(--accent-primary)",
+                fontSize: 10, letterSpacing: "0.16em", fontFamily: "monospace",
+                cursor: walletConnecting ? "not-allowed" : "pointer",
+              }}>
+              {walletConnecting ? "CONNECTING..." : "CONNECT WALLET"}
+            </button>
+          )}
           <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#22C55E", boxShadow: "0 0 6px #22C55E" }} />
           <div style={{ fontSize: 10, color: "var(--text-muted)", letterSpacing: "0.15em", fontFamily: "monospace" }}>
             SOLANA MAINNET

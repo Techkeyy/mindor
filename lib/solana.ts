@@ -520,6 +520,29 @@ export function savePositionToStorage(
   }
 }
 
+export function loadPositionsFromStorage(walletAddress: string): Array<{
+  address: string
+  tokenA: string
+  tokenB: string
+  protocol: string
+  feeApr: number
+  signature: string
+  explorerUrl: string
+  timestamp: string
+  capitalUSD: number
+}> {
+  try {
+    if (typeof window === 'undefined') return []
+    const key = `mindor_positions_${walletAddress}`
+    const raw = localStorage.getItem(key)
+    if (!raw) return []
+    return JSON.parse(raw)
+  } catch (e) {
+    console.error('[positions] load error:', e)
+    return []
+  }
+}
+
 export async function loadOnChainPositions(
   walletAddress: string,
   poolAddress?: string,
