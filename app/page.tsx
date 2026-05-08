@@ -176,7 +176,7 @@ export default function Home() {
                 <br />
                 - Conservative: USDC/USDT Meteora - 7.9% APR
                 <br />
-                - Balanced: SOL/USDC Orca - 19.7% APR
+                - Balanced: SOL/USDC Meteora - 28.4% APR
                 <br />
                 - Aggressive: SOL/JTO Meteora - 67.3% APR
                 <br />
