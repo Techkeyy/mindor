@@ -41,7 +41,10 @@ export default function Home() {
       overflowY: 'auto',
     }}>
       <header style={{ position: 'fixed', top: 0, left: 0, right: 0, height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', background: 'rgba(19, 26, 36, 0.8)', backdropFilter: 'blur(14px)', borderBottom: '1px solid var(--border-subtle)', zIndex: 50 }}>
-        <div style={{ color: 'var(--accent-primary)', fontSize: '11px', letterSpacing: '0.35em' }}>MINDOR</div>
+        <div style={{ color: 'var(--accent-primary)', fontSize: '11px', letterSpacing: '0.35em', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <img src="/logo.png" alt="Mindor" style={{ width: 24, height: 24, borderRadius: 4 }} />
+          MINDOR
+        </div>
         <nav style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
           {[
             ['Features', '#features'],
@@ -188,8 +191,11 @@ export default function Home() {
 
         <footer style={{ borderTop: '1px solid var(--border-subtle)', padding: '64px 24px', fontSize: '12px' }}>
           <div style={{ ...pageWidth, display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '20px', alignItems: 'center' }}>
-            <div>
-              <div style={{ color: 'var(--accent-primary)', letterSpacing: '0.35em', marginBottom: '6px' }}>MINDOR</div>
+              <div>
+                <div style={{ color: 'var(--accent-primary)', letterSpacing: '0.35em', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <img src="/logo.png" alt="Mindor" style={{ width: 18, height: 18, borderRadius: 3 }} />
+                  MINDOR
+                </div>
               <div style={{ color: 'var(--text-secondary)' }}>Intent to Execution</div>
             </div>
             <div style={{ display: 'flex', gap: '18px', justifyContent: 'center', color: 'var(--text-secondary)' }}>

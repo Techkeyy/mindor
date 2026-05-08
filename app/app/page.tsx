@@ -252,7 +252,9 @@ export default function AppPage() {
           <a href="/" style={{
             color: "var(--accent-primary)", fontSize: 11,
             letterSpacing: "0.3em", fontFamily: "monospace", textDecoration: "none",
+            display: "flex", alignItems: "center", gap: 8,
           }}>
+            <img src="/logo.png" alt="Mindor" style={{ width: 22, height: 22, borderRadius: 4 }} />
             {"<"} MINDOR
           </a>
           <div style={{ height: 12, width: 1, background: "var(--border-subtle)" }} />
