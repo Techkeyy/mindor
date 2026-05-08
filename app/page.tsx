@@ -97,12 +97,21 @@ export default function Home() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '18px' }}>
             {[
-              { icon: '?', title: 'Which pool?', body: 'Thousands of options. No clear signal.' },
-              { icon: '-', title: 'What will happen?', body: 'Impermanent loss is invisible until it is too late.' },
-              { icon: '*', title: 'How do I execute?', body: 'Wallets, slippage, ranges - too much friction.' },
+              { 
+                svg: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/><path d="M8 11h6"/><path d="M11 8v6"/></svg>,
+                title: 'Which pool?', body: 'Thousands of options. No clear signal.' 
+              },
+              { 
+                svg: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>,
+                title: 'What will happen?', body: 'Impermanent loss is invisible until it is too late.' 
+              },
+              { 
+                svg: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>,
+                title: 'How do I execute?', body: 'Wallets, slippage, ranges — too much friction.' 
+              },
             ].map((item, index) => (
               <motion.div key={item.title} {...fadeUp(index * 0.15)} style={{ ...panelStyle, padding: '24px' }}>
-                <div style={{ fontSize: '28px', marginBottom: '12px' }}>{item.icon}</div>
+                <div style={{ marginBottom: '12px', color: 'var(--accent-primary)', opacity: 0.8 }}>{item.svg}</div>
                 <div style={{ fontSize: '22px', fontWeight: 700, marginBottom: '10px' }}>{item.title}</div>
                 <div style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>{item.body}</div>
               </motion.div>

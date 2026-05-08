@@ -1,47 +1,43 @@
-# Mindor - Intent to Execution
+# Mindor — Intent to Execution
 
-> The first AI-powered DeFi LP simulation and 
-> execution platform on Solana.
+> AI-powered DeFi LP simulation and execution on Solana.
+> Describe your yield goal in plain English — Mindor simulates,
+> then executes a real LP position on-chain.
 
-**Live Demo:** https://mindor-seven.vercel.app  
-**Telegram Bot:** https://t.me/mindorr_bot
+**Live:** https://mindor-seven.vercel.app  
+**Telegram:** https://t.me/mindorr_bot  
+**Hackathon:** 100xDevs Frontier Track · Colosseum Solana Frontier
 
 ---
 
 ## What It Does
 
-Type your investment goal in plain English.
-Mindor parses your intent with AI, fetches live 
-pool data, simulates every outcome, then executes 
-a real LP position on Solana mainnet — all in one flow.
+```
+"$2k, low risk, stable yield"  →  Pools found  →  Simulated  →  Executed on-chain
+          (DeepSeek)               (DefiLlama)    (IL + fees)    (Meteora DLMM)
+```
 
-**Intent → Simulation → Execution**
-
----
-
-## The Problem
-
-DeFi liquidity provision is one of the best yield 
-opportunities in crypto. But almost nobody does it 
-well because:
-
-- Thousands of pools with no clear signal
-- Impermanent loss is invisible until it hits
-- Execution requires technical knowledge
-
-Mindor solves all three in a single interface.
+1. **Intent Parsing** — DeepSeek extracts capital, risk, and duration from natural language
+2. **Pool Discovery** — DefiLlama API finds the best Meteora DLMM pools on Solana
+3. **Simulation** — Fee projections (1D/7D/30D/1Y) + impermanent loss scenarios + net PnL
+4. **On-Chain Execution** — Opens a real LP position via Phantom wallet + Meteora DLMM
+5. **P&L Dashboard** — Live position tracking with current value, unclaimed fees, ROI
 
 ---
 
 ## Features
 
-- **AI Intent Parsing** — Groq Llama 3.3 70b
-- **Live Pool Data** — 486+ Solana pools via DefiLlama
-- **Simulation** — Fee projections (1D/7D/30D/1Y) + IL analysis
-- **Real Execution** — Meteora DLMM on Solana Mainnet
-- **Persistent Positions** — On-chain position loading
-- **Telegram Bot** — @mindorr_bot for mobile access
-- **Public API** — Any AI agent can call the simulation layer
+- **Natural Language Intent** — "I want safe yield on $5K" → executes on-chain
+- **Live Pool Data** — Real-time Meteora DLMM pools from DefiLlama (SOL-USDC, USDC-USDT, SOL-JTO)
+- **Impermanent Loss Analysis** — IL scenarios at -50% to +50% price movement, with fee offset
+- **On-Chain Execution** — Opens LP positions on Solana mainnet via Phantom wallet + Meteora DLMM
+- **Position Dashboard** — Expandable cards showing current value, unclaimed fees, ROI %
+- **Fee Claiming** — Claim swap fees directly from your LP positions without closing them
+- **Multi-Pool Scanning** — Scans all supported Meteora pools for your positions
+- **Position Persistence** — Positions survive refreshes and reconnects (localStorage + on-chain)
+- **Portfolio Summary** — Total deposited, current value, fees earned, net P&L across all positions
+- **Mobile Responsive** — Panels stack vertically on small screens
+- **0% Platform Fees** — Mindor takes no cut. Revenue from Meteora referral program (future)
 
 ---
 
@@ -49,72 +45,58 @@ Mindor solves all three in a single interface.
 
 | Layer | Technology |
 |---|---|
-| Framework | Next.js 16 (App Router) |
-| AI/LLM | Groq (Llama 3.3 70b) |
-| LP Data | DefiLlama Yields API |
-| Blockchain | Solana Web3.js + Meteora DLMM SDK |
-| Wallet | Phantom |
-| Animations | Framer Motion |
-| Charts | Recharts |
+| Frontend | Next.js 16 (App Router), React, Framer Motion |
+| AI | DeepSeek API (deepseek-chat) |
+| Blockchain | Solana Web3.js, Meteora DLMM SDK, Phantom Wallet |
+| Data | DefiLlama API, CoinGecko API |
+| Styling | CSS-in-JS (inline), Recharts (IL charts) |
 | Deployment | Vercel |
 
 ---
 
-## Public Simulation API
+## Getting Started
 
-Any AI agent can call Mindor's simulation layer:
+```bash
+pnpm install
+cp .env.example .env.local   # add your DEEPSEEK_API_KEY
+pnpm dev                      # http://localhost:3000
+```
 
-POST /api/mindor/simulate
-Content-Type: application/json
-
-{
-  "intent": "2k low risk stable yield",
-  "capitalUSD": 2000
-}
-
-Returns strategies, fee projections, and IL analysis.
-No API key required.
+Required env vars:
+- `DEEPSEEK_API_KEY` — DeepSeek API key for intent parsing
+- `NEXT_PUBLIC_SOLANA_RPC` — (optional) Custom Solana RPC URL
+- `NEXT_PUBLIC_APP_URL` — (optional) Your deployment URL
 
 ---
 
-## Telegram Bot
+## Screenshots
 
-Send your intent to @mindorr_bot on Telegram.
-Receive simulation results in seconds with a 
-deep link back to execute on-chain.
+<!-- TODO: Add screenshots of the working product -->
+- Landing page
+- Intent terminal + simulation results
+- P&L dashboard with live positions
+- Execution flow (wallet connect → confirm → tx confirmed)
 
 ---
 
 ## Architecture
 
-User Intent (Natural Language)
-       |
-  Groq AI Parser
-       |
-  DefiLlama Pool Fetch (486+ pools)
-       |
-  Simulation Engine (Fee math + IL curves)
-       |
-  Strategy Cards (Conservative/Balanced/Aggressive)
-       |
-  Phantom Wallet Connect
-       |
-  Meteora DLMM addLiquidity (Solana Mainnet)
-       |
-  On-chain Position Confirmed
+```
+app/
+├── page.tsx              # Landing page
+├── app/page.tsx          # Main app (terminal + dashboard)
+├── api/
+│   ├── parse-intent/     # DeepSeek NLP → structured intent
+│   └── fetch-pools/      # DefiLlama → simulated strategies
+lib/
+├── solana.ts             # Wallet, DLMM execution, P&L, fee claiming
+├── defillama.ts          # Pool discovery, address lookup, IL classification
+└── simulation.ts         # Fee simulation, IL math, strategy ranking
+components/
+├── PositionsPanel.tsx    # P&L dashboard + portfolio summary
+├── SimulationResults.tsx # Strategy cards + IL chart
+├── ExecutionModal.tsx    # Wallet connect → confirm → execute flow
+├── ILChart.tsx           # Recharts area chart for IL scenarios
+└── StrategyCard.tsx      # Individual pool strategy card
+```
 
----
-
-## Roadmap
-
-- Position management (remove liquidity, claim fees)
-- Delegated execution via Squads Protocol
-- Autonomous rebalancing agent
-- Multi-protocol support (Orca, Raydium)
-- LPAgent.io integration for deeper analytics
-
----
-
-## Built For
-
-100xDevs Frontier Hackathon

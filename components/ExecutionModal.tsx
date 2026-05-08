@@ -31,11 +31,66 @@ export default function ExecutionModal({
   const [errorMsg, setErrorMsg] = useState<string>("");
   const color = STRATEGY_COLORS[strategy.label];
 
-  // Derived defaults from capitalUSD — split 50/50
-  const defaultTokenAAmt = ((capitalUSD / 2) / 150).toFixed(4);
-  const defaultTokenBAmt = (capitalUSD / 2).toFixed(2);
-  const [tokenAInput, setTokenAInput] = useState<string>(defaultTokenAAmt);
-  const [tokenBInput, setTokenBInput] = useState<string>(defaultTokenBAmt);
+  const [tokenAInput, setTokenAInput] = useState<string>("");
+  const [tokenBInput, setTokenBInput] = useState<string>("");
+
+  // Fetch live prices and compute sensible deposit defaults
+  useEffect(() => {
+    let cancelled = false;
+    const computeDefaults = async () => {
+      const STABLES = new Set(["USDC", "USDT", "DAI", "FRAX", "USDH"]);
+      const tokenA = strategy.pool.tokenA.toUpperCase();
+      const tokenB = strategy.pool.tokenB.toUpperCase();
+      const aIsStable = STABLES.has(tokenA);
+      const bIsStable = STABLES.has(tokenB);
+
+      if (aIsStable && bIsStable) {
+        // Both stablecoins — capital / 2 for each
+        if (!cancelled) {
+          setTokenAInput((capitalUSD / 2).toFixed(2));
+          setTokenBInput((capitalUSD / 2).toFixed(2));
+        }
+        return;
+      }
+
+      // Fetch live price for the volatile token
+      try {
+        const res = await fetch(
+          `https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd`,
+          { cache: "no-store" }
+        );
+        const data = await res.json();
+        const solPrice = data?.solana?.usd ?? 150;
+        const half = capitalUSD / 2;
+
+        if (tokenA === "SOL" || tokenB === "SOL") {
+          const solAmount = half / solPrice;
+          if (tokenA === "SOL" && !cancelled) {
+            setTokenAInput(solAmount.toFixed(4));
+            setTokenBInput(half.toFixed(2));
+          } else if (!cancelled) {
+            setTokenAInput(half.toFixed(2));
+            setTokenBInput(solAmount.toFixed(4));
+          }
+        } else {
+          // Non-SOL volatile — assume ~$1 as fallback
+          if (!cancelled) {
+            setTokenAInput(half.toFixed(2));
+            setTokenBInput(half.toFixed(2));
+          }
+        }
+      } catch {
+        // CoinGecko down — use reasonable fallback
+        if (!cancelled) {
+          const fallback = (capitalUSD / 2).toFixed(2);
+          setTokenAInput(fallback);
+          setTokenBInput(fallback);
+        }
+      }
+    };
+    computeDefaults();
+    return () => { cancelled = true; };
+  }, [strategy.pool.tokenA, strategy.pool.tokenB, capitalUSD]);
 
   const handleConnect = async () => {
     setStep("connecting");

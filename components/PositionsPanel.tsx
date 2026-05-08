@@ -497,6 +497,36 @@ export default function PositionsPanel({
           );
         })}
       </AnimatePresence>
+
+      {/* Portfolio summary — totals across all positions with P&L data */}
+      {(() => {
+        const withPnl = positions.filter(p => p.pnl && !p.pnlLoading && !p.pnl.error);
+        if (withPnl.length === 0) return null;
+        const totalDeposited = withPnl.reduce((s, p) => s + p.pnl!.depositedValue, 0);
+        const totalCurrent = withPnl.reduce((s, p) => s + p.pnl!.currentValue, 0);
+        const totalFees = withPnl.reduce((s, p) => s + p.pnl!.unclaimedFees + p.pnl!.claimedFees, 0);
+        const totalPnl = withPnl.reduce((s, p) => s + p.pnl!.pnl, 0);
+        const pnlColor = totalPnl >= 0 ? "#22C55E" : "#EF4444";
+        return (
+          <div style={{
+            padding: "10px 16px",
+            borderTop: "1px solid var(--border-active)",
+            display: "flex",
+            alignItems: "center",
+            gap: 24,
+            background: "var(--bg-surface)",
+            flexWrap: "wrap",
+          }}>
+            <div style={{ fontSize: 9, letterSpacing: "0.15em", color: "var(--text-muted)", fontFamily: "monospace" }}>
+              PORTFOLIO
+            </div>
+            <Sum label="Deposited" value={currency(totalDeposited)} />
+            <Sum label="Current" value={currency(totalCurrent)} />
+            <Sum label="Fees" value={currency(totalFees)} color="#FBBF24" />
+            <Sum label="P&L" value={`${totalPnl >= 0 ? "+" : ""}${currency(totalPnl)}`} color={pnlColor} bold />
+          </div>
+        );
+      })()}
     </motion.div>
   );
 }
@@ -543,5 +573,29 @@ function LoadingDots() {
         />
       ))}
     </span>
+  );
+}
+
+// Compact summary stat for the portfolio bar
+function Sum({
+  label,
+  value,
+  color = "var(--text-primary)",
+  bold,
+}: {
+  label: string;
+  value: string;
+  color?: string;
+  bold?: boolean;
+}) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+      <span style={{ fontSize: 9, color: "var(--text-muted)", fontFamily: "monospace", letterSpacing: "0.08em" }}>
+        {label}
+      </span>
+      <span style={{ fontSize: 12, fontWeight: bold ? 800 : 600, color, fontFamily: "monospace" }}>
+        {value}
+      </span>
+    </div>
   );
 }
