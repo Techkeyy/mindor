@@ -32,9 +32,10 @@ type LlamaPool = {
 /** Classify IL risk based on token pair symbol */
 function classifyILRisk(symbol: string): 'low' | 'medium' | 'high' {
   const s = symbol.toUpperCase()
-  if (s.includes('USDC') && s.includes('USDT')) return 'low'
-  if (s.includes('USDC') || s.includes('USDT') || s.includes('DAI'))
-    return 'medium'
+  const STABLES = ['USDC', 'USDT', 'DAI', 'FRAX', 'TUSD', 'BUSD', 'USDH', 'USDP', 'GUSD', 'LUSD', 'USD']
+  const hasTwoStables = STABLES.filter(stable => s.includes(stable)).length >= 2
+  if (hasTwoStables) return 'low'
+  if (STABLES.some(stable => s.includes(stable))) return 'medium'
   return 'high'
 }
 
@@ -148,20 +149,30 @@ export async function fetchTopPools(
   }
 }
 
-/** Fetch pool detail — enriches with mock history for now */
+/** Fetch pool detail — enriches with placeholder history for now.
+ *  TODO: Replace hardcoded/mock data with real on-chain fee history. */
 export async function fetchPoolDetail(
   poolAddress: string
 ): Promise<PoolDetail> {
   const pools = await fetchTopPools('high')
   const base = pools.find(p => p.address === poolAddress)
     ?? FALLBACK_POOLS[0]
+
+  // Deterministic mock fee history from seed (avoids random jitter on every call)
+  const seed = poolAddress.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
+  const mockRandom = (i: number) => {
+    const x = Math.sin(seed + i) * 10000
+    return x - Math.floor(x)
+  }
+
   return {
     ...base,
     feeHistory: Array.from({ length: 30 }, (_, i) => ({
       date: new Date(Date.now() - i * 86400000)
         .toISOString().split('T')[0],
-      fees: base.feeApr * 0.8 + Math.random() * base.feeApr * 0.4
+      fees: base.feeApr * 0.8 + mockRandom(i) * base.feeApr * 0.4
     })),
+    // TODO: Fetch real price range from an oracle
     priceRange: { min: 120, max: 180, current: 148 }
   }
 }

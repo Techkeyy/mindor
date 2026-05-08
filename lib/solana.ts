@@ -2,7 +2,6 @@
 import {
   Connection,
   PublicKey,
-  SystemProgram,
   Transaction,
   Keypair,
   LAMPORTS_PER_SOL,
@@ -16,10 +15,6 @@ export const connection = new Connection(
     clusterApiUrl('mainnet-beta'),
   { commitment: 'confirmed' }
 )
-
-const KNOWN_POOLS: Record<string, string> = {
-  'SOL-USDC': '5rCf1DM8LjKTw4YqhnoLcngyZYeNnQqztScTogYHAS6',
-}
 
 export type WalletAdapter = {
   publicKey: PublicKey | null
@@ -128,29 +123,23 @@ async function getSolPrice(): Promise<number> {
       '?ids=solana&vs_currencies=usd',
       { cache: 'no-store' }
     )
+    if (!res.ok) throw new Error(`CoinGecko HTTP ${res.status}`)
     const data = await res.json()
-    return data?.solana?.usd ?? 150
-  } catch {
+    const price = data?.solana?.usd
+    if (!price || typeof price !== 'number') {
+      console.warn('[solana] CoinGecko returned no SOL price, using fallback $150')
+      return 150
+    }
+    return price
+  } catch (err) {
+    console.warn('[solana] CoinGecko fetch failed, using fallback $150:', err)
     return 150
   }
 }
 
-async function findMeteoraPool(
-  tokenAMint: string,
-  tokenBMint: string
-): Promise<string | null> {
-  try {
-    const key1 = `${tokenAMint}-${tokenBMint}`
-    const key2 = `${tokenBMint}-${tokenAMint}`
-
-    if (KNOWN_POOLS[key1]) return KNOWN_POOLS[key1]
-    if (KNOWN_POOLS[key2]) return KNOWN_POOLS[key2]
-
-    return KNOWN_POOLS['SOL-USDC']
-  } catch {
-    return null
-  }
-}
+// ============================================================
+// LP Execution — opens a position in the selected Meteora pool
+// ============================================================
 
 export async function executeLPPosition(
   wallet: WalletAdapter,
@@ -166,13 +155,17 @@ export async function executeLPPosition(
 
     const DLMM = (await import('@meteora-ag/dlmm')).default
 
-    const POOL = new PublicKey(
-      '5rCf1DM8LjKTw4YqhnoLcngyZYeNnQqztScTogYHAS6'
-    )
+    // Parse the pool address from the strategy — use the pool the user actually selected
+    let poolPubkey: PublicKey
+    try {
+      poolPubkey = new PublicKey(poolAddress)
+    } catch {
+      return { success: false, error: `Invalid pool address: ${poolAddress}` }
+    }
 
-    console.log('[meteora] loading pool...')
-    const dlmmPool = await DLMM.create(connection, POOL)
-    console.log('[meteora] pool loaded:', POOL.toBase58())
+    console.log('[meteora] loading pool:', poolPubkey.toBase58())
+    const dlmmPool = await DLMM.create(connection, poolPubkey)
+    console.log('[meteora] pool loaded')
 
     const activeBin = await dlmmPool.getActiveBin()
     console.log('[meteora] active bin:', activeBin.binId)
@@ -184,8 +177,7 @@ export async function executeLPPosition(
     const positionKeypair = Keypair.generate()
     console.log('[meteora] position:', positionKeypair.publicKey.toBase58())
 
-    // Calculate real amounts from capitalUSD
-    // Split 50/50 between SOL and USDC
+    // Calculate deposit amounts — split 50/50 between the two tokens
     const solPrice = await getSolPrice()
     const halfCapital = capitalUSD / 2
 
@@ -210,7 +202,7 @@ export async function executeLPPosition(
       await connection.getLatestBlockhash()
 
     console.log('[meteora] building initializePositionAndAddLiquidityByStrategy tx...')
-    const createPositionTx = await dlmmPool.initializePositionAndAddLiquidityByStrategy({
+    const tx = await dlmmPool.initializePositionAndAddLiquidityByStrategy({
       positionPubKey: positionKeypair.publicKey,
       user: wallet.publicKey,
       totalXAmount: solLamports,
@@ -222,84 +214,112 @@ export async function executeLPPosition(
       },
     })
 
-    createPositionTx.recentBlockhash = blockhash
-    createPositionTx.feePayer = wallet.publicKey
-    createPositionTx.partialSign(positionKeypair)
+    tx.recentBlockhash = blockhash
+    tx.feePayer = wallet.publicKey
+    tx.partialSign(positionKeypair)
 
-    const signedInitTx = await wallet.signTransaction(createPositionTx)
+    const signedTx = await wallet.signTransaction(tx)
 
-    const initSigners = signedInitTx.signatures.filter(
+    const signers = signedTx.signatures.filter(
       s => s.signature !== null
     )
-    console.log('[meteora] signatures count:', initSigners.length)
-    if (initSigners.length < 2) {
+    console.log('[meteora] signatures count:', signers.length)
+    if (signers.length < 2) {
       throw new Error(
         'Transaction requires 2 signatures, got ' +
-        initSigners.length
+        signers.length
       )
     }
 
-    console.log('[meteora] sending initializePositionAndAddLiquidity...')
-    const initSig = await connection.sendRawTransaction(
-      (signedInitTx as Transaction).serialize(),
+    console.log('[meteora] sending transaction...')
+    const sig = await connection.sendRawTransaction(
+      (signedTx as Transaction).serialize(),
       { skipPreflight: false, maxRetries: 3 }
     )
 
     await connection.confirmTransaction({
-      signature: initSig,
+      signature: sig,
       blockhash,
       lastValidBlockHeight,
     })
-    console.log('[meteora] position initialized:', initSig)
+    console.log('[meteora] SUCCESS:', sig)
 
-    const { blockhash: blockhash2, lastValidBlockHeight: lvbh2 } =
+    return {
+      success: true,
+      signature: sig,
+      explorerUrl: `https://explorer.solana.com/tx/${sig}`,
+      poolAddress: poolPubkey.toBase58(),
+    }
+  } catch (err: any) {
+    console.error('[meteora] execution failed:', err.message)
+    return { success: false, error: err.message ?? String(err) }
+  }
+}
+
+// ============================================================
+// Withdraw / Close Position
+// ============================================================
+
+export async function closeLPPosition(
+  wallet: WalletAdapter,
+  positionAddress: string,
+  poolAddress: string,
+): Promise<ExecutionResult> {
+  try {
+    if (!wallet.publicKey) {
+      return { success: false, error: 'Wallet not connected' }
+    }
+
+    const DLMM = (await import('@meteora-ag/dlmm')).default
+
+    const poolPubkey = new PublicKey(poolAddress)
+    const positionPubkey = new PublicKey(positionAddress)
+
+    console.log('[meteora] loading pool for withdrawal:', poolPubkey.toBase58())
+    const dlmmPool = await DLMM.create(connection, poolPubkey)
+
+    const { blockhash, lastValidBlockHeight } =
       await connection.getLatestBlockhash()
 
-    console.log('[meteora] building addLiquidity tx...')
-    const addLiqTx = await dlmmPool.addLiquidityByStrategy({
-      positionPubKey: positionKeypair.publicKey,
+    console.log('[meteora] building removeLiquidity tx...')
+    const tx = await dlmmPool.removeLiquidity({
+      positionPubKey: positionPubkey,
       user: wallet.publicKey,
-      totalXAmount: solLamports,
-      totalYAmount: usdcAmount,
-      strategy: {
-        maxBinId,
-        minBinId,
-        strategyType: 0,
-      },
     })
 
-    addLiqTx.recentBlockhash = blockhash2
-    addLiqTx.feePayer = wallet.publicKey
+    tx.recentBlockhash = blockhash
+    tx.feePayer = wallet.publicKey
 
-    const signedAddTx = await wallet.signTransaction(addLiqTx)
+    const signedTx = await wallet.signTransaction(tx)
 
-    console.log('[meteora] sending addLiquidity...')
-    const addSig = await connection.sendRawTransaction(
-      (signedAddTx as Transaction).serialize(),
+    console.log('[meteora] sending removeLiquidity...')
+    const sig = await connection.sendRawTransaction(
+      (signedTx as Transaction).serialize(),
       { skipPreflight: false, maxRetries: 3 }
     )
 
     await connection.confirmTransaction({
-      signature: addSig,
-      blockhash: blockhash2,
-      lastValidBlockHeight: lvbh2,
+      signature: sig,
+      blockhash,
+      lastValidBlockHeight,
     })
-
-    console.log('[meteora] SUCCESS:', addSig)
+    console.log('[meteora] withdrawal SUCCESS:', sig)
 
     return {
       success: true,
-      signature: addSig,
-      explorerUrl: `https://explorer.solana.com/tx/${addSig}`,
-      poolAddress: POOL.toBase58(),
-      tokenA: 'SOL',
-      tokenB: 'USDC',
+      signature: sig,
+      explorerUrl: `https://explorer.solana.com/tx/${sig}`,
+      poolAddress: poolPubkey.toBase58(),
     }
   } catch (err: any) {
-    console.error('[meteora] failed, using fallback:', err.message)
-    return await devnetFallbackTx(wallet)
+    console.error('[meteora] withdrawal failed:', err.message)
+    return { success: false, error: err.message ?? String(err) }
   }
 }
+
+// ============================================================
+// Position storage (localStorage + on-chain)
+// ============================================================
 
 export function savePositionToStorage(
   walletAddress: string,
@@ -334,53 +354,15 @@ export function savePositionToStorage(
   }
 }
 
-async function devnetFallbackTx(
-  wallet: WalletAdapter
-): Promise<ExecutionResult> {
-  try {
-    if (!wallet.publicKey) {
-      return { success: false, error: 'No wallet' }
-    }
-
-    const { blockhash, lastValidBlockHeight } =
-      await connection.getLatestBlockhash()
-
-    const transaction = new Transaction({
-      recentBlockhash: blockhash,
-      feePayer: wallet.publicKey,
-    })
-
-    transaction.add(
-      SystemProgram.transfer({
-        fromPubkey: wallet.publicKey,
-        toPubkey: wallet.publicKey,
-        lamports: 1000,
-      })
-    )
-
-    const signed = await wallet.signTransaction(transaction)
-    const signature = await connection.sendRawTransaction(
-      (signed as any).serialize()
-    )
-
-    await connection.confirmTransaction({
-      signature,
-      blockhash,
-      lastValidBlockHeight,
-    })
-
-    return {
-      success: true,
-      signature,
-      explorerUrl: `https://explorer.solana.com/tx/${signature}`,
-    }
-  } catch (err) {
-    return { success: false, error: String(err) }
-  }
-}
-
+/**
+ * Load positions from a specific Meteora pool.
+ * NOTE: Currently hardcoded to SOL-USDC pool.
+ * TODO: Iterate over all known pool addresses or use Helius/SolanaFM
+ *       to discover all DLMM positions for a wallet.
+ */
 export async function loadOnChainPositions(
-  walletAddress: string
+  walletAddress: string,
+  poolAddress?: string,
 ): Promise<Array<{
   address: string
   tokenA: string
@@ -395,7 +377,10 @@ export async function loadOnChainPositions(
   try {
     const DLMM = (await import('@meteora-ag/dlmm')).default
     const owner = new PublicKey(walletAddress)
-    const pool = await DLMM.create(connection, new PublicKey('5rCf1DM8LjKTw4YqhnoLcngyZYeNnQqztScTogYHAS6'))
+    const poolPubkey = new PublicKey(
+      poolAddress ?? '5rCf1DM8LjKTw4YqhnoLcngyZYeNnQqztScTogYHAS6'
+    )
+    const pool = await DLMM.create(connection, poolPubkey)
 
     const { userPositions } = await pool.getPositionsByUserAndLbPair(owner)
 
@@ -419,6 +404,3 @@ export async function loadOnChainPositions(
     return []
   }
 }
-
-
-

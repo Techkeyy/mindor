@@ -1,13 +1,11 @@
-@import "tailwindcss";
-
 :root {
   --bg-base: #080B12;
   --bg-surface: #0D1117;
   --bg-elevated: #131A24;
   --border-subtle: #1E2A3A;
   --border-active: #2DD4BF;
-  --accent-primary: #2DD4BF;    /* teal glow */
-  --accent-secondary: #7C3AED;  /* purple */
+  --accent-primary: #2DD4BF;
+  --accent-secondary: #7C3AED;
   --accent-danger: #F87171;
   --accent-warning: #FBBF24;
   --text-primary: #F0F6FF;
@@ -19,8 +17,7 @@
 }
 
 html,
-body,
-#__next {
+body {
   height: 100%;
 }
 
@@ -43,17 +40,4 @@ body::before {
     transparent 1px,
     transparent 4px
   );
-}
-
-@keyframes mindor-pulse {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 0.45;
-  }
-
-  50% {
-    transform: scale(1.35);
-    opacity: 0.9;
-  }
 }

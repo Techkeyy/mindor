@@ -4,8 +4,6 @@ node_modules/
 .next/
 *.log
 .DS_Store
-scripts/# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # dependencies
 /node_modules
 /.pnp

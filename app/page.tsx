@@ -180,7 +180,7 @@ export default function Home() {
           <p style={{ color: 'var(--text-secondary)', maxWidth: '660px', marginBottom: '28px' }}>Any AI agent can call Mindor&apos;s simulation layer directly.</p>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '18px' }}>
-            {['POST /api/mindor/simulate', 'POST /api/mindor/execute'].map((endpoint) => (
+            {['POST /api/mindor/simulate', 'GET /api/mindor/simulate'].map((endpoint) => (
               <div key={endpoint} style={{ ...panelStyle, borderLeft: '3px solid var(--accent-primary)', padding: '20px', fontFamily: "JetBrains Mono, monospace", fontSize: '14px' }}>{endpoint}</div>
             ))}
           </div>
@@ -193,11 +193,11 @@ export default function Home() {
               <div style={{ color: 'var(--text-secondary)' }}>Intent to Execution</div>
             </div>
             <div style={{ display: 'flex', gap: '18px', justifyContent: 'center', color: 'var(--text-secondary)' }}>
-              <a href="https://github.com" style={{ color: 'inherit', textDecoration: 'none' }}>GitHub</a>
+              <a href="https://github.com/Techkeyy/mindor" style={{ color: 'inherit', textDecoration: 'none' }}>GitHub</a>
               <a href="https://t.me/mindorr_bot" style={{ color: 'inherit', textDecoration: 'none' }}>Telegram</a>
               <a href="#api" style={{ color: 'inherit', textDecoration: 'none' }}>Docs</a>
             </div>
-            <div style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>Built on Solana x DefiLlama x Claude AI</div>
+            <div style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>Built on Solana x DefiLlama x Groq AI</div>
           </div>
           <div style={{ ...pageWidth, marginTop: '24px', color: 'var(--text-muted)' }}>Open simulation API - call it from your agent</div>
         </footer>

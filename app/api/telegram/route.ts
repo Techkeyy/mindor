@@ -3,6 +3,7 @@ import { fetchTopPools } from '@/lib/defillama'
 import { rankStrategies } from '@/lib/simulation'
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
+const SECRET_TOKEN = process.env.TELEGRAM_SECRET_TOKEN
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL
   ?? 'https://mindor.xyz'
 
@@ -27,6 +28,9 @@ async function sendMessage(
   )
 }
 
+/**
+ * Parse the user's intent by calling the internal parse-intent API.
+ */
 async function parseIntentViaGroq(
   userMessage: string
 ): Promise<{
@@ -57,6 +61,15 @@ async function parseIntentViaGroq(
 
 export async function POST(req: NextRequest) {
   try {
+    // Verify the request is actually from Telegram
+    if (SECRET_TOKEN) {
+      const headerToken = req.headers.get('X-Telegram-Bot-Api-Secret-Token')
+      if (headerToken !== SECRET_TOKEN) {
+        console.error('[telegram] invalid secret token, rejecting request')
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+    }
+
     const body = await req.json()
     const message = body?.message
     if (!message) {

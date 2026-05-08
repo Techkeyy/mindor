@@ -27,7 +27,10 @@ export type StrategyCard = {
   recommendation: string
 }
 
-/** Calculate fee projections for a pool and capital amount */
+/** Calculate fee projections for a pool and capital amount.
+ *  NOTE: This uses simple-interest linear projection based on current APR.
+ *  Actual LP fees depend on trading volume routed through your specific
+ *  price bins and vary significantly day to day. Treat these as estimates. */
 export function simulateFees(
   pool: import('./defillama').Pool,
   capitalUSD: number,
@@ -48,7 +51,11 @@ export function simulateFees(
   }
 }
 
-/** Simulate impermanent loss across price scenarios */
+/** Simulate impermanent loss across price scenarios.
+ *  NOTE: This uses the Uniswap V2 constant-product AMM formula
+ *  (2*sqrt(r)/(1+r) - 1). Meteora DLMM uses concentrated-liquidity bins,
+ *  which have different IL characteristics. Treat IL numbers as
+ *  approximate/directional only. */
 export function simulateIL(
   pool: import('./defillama').Pool,
   capitalUSD: number,
@@ -80,14 +87,17 @@ export function rankStrategies(
 ): StrategyCard[] {
   const conservative = [...pools]
     .filter(p => p.ilRisk === 'low')
-    .sort((a, b) => b.netApr - a.netApr)[0] ?? pools[0]
+    .sort((a, b) => b.netApr - a.netApr)[0] ?? safe(0)
 
   const balanced = [...pools]
     .filter(p => p.ilRisk === 'medium')
-    .sort((a, b) => b.netApr - a.netApr)[0] ?? pools[1]
+    .sort((a, b) => b.netApr - a.netApr)[0] ?? safe(1)
 
   const aggressive = [...pools]
-    .sort((a, b) => b.feeApr - a.feeApr)[0] ?? pools[2]
+    .sort((a, b) => b.feeApr - a.feeApr)[0] ?? safe(0)
+
+  // Guard: if we couldn't find enough pools, pad with fallback (best-effort)
+  const safe = (idx: number) => pools[idx] ?? pools[pools.length - 1] ?? pools[0]
 
   const makeCard = (
     rank: 1 | 2 | 3,
