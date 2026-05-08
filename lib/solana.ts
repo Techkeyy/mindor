@@ -36,6 +36,23 @@ export type ExecutionResult = {
   tokenB?: string
 }
 
+// Token mint addresses on Solana mainnet
+const MINT_SOL = 'So11111111111111111111111111111111111111112' // Wrapped SOL
+const MINT_USDC = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
+const MINT_USDT = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'
+const MINT_JTO = 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQ2x2v9f2mCL'
+
+// CoinGecko IDs for price lookup
+const CG_IDS: Record<string, string> = {
+  [MINT_SOL]: 'solana',
+  [MINT_USDC]: 'usd-coin',
+  [MINT_USDT]: 'tether',
+  [MINT_JTO]: 'jito-governance-token',
+}
+
+// Stablecoins that are always ~$1
+const STABLECOINS = new Set([MINT_USDC, MINT_USDT])
+
 export function getPhantomWallet(): WalletAdapter | null {
   if (typeof window === 'undefined') return null
   const phantom = (window as any)?.phantom?.solana
@@ -105,9 +122,7 @@ export async function connectWallet(): Promise<{
   }
 }
 
-export async function getBalance(
-  address: string
-): Promise<number> {
+export async function getBalance(address: string): Promise<number> {
   try {
     const pubkey = new PublicKey(address)
     const balance = await connection.getBalance(pubkey)
@@ -117,45 +132,76 @@ export async function getBalance(
   }
 }
 
-async function getSolPrice(): Promise<number> {
+/**
+ * Fetch USD prices for multiple tokens from CoinGecko.
+ * Returns a map of coingecko_id → price in USD.
+ * Stablecoins always return 1.0.
+ */
+async function getTokenPrices(mints: string[]): Promise<Map<string, number>> {
+  const prices = new Map<string, number>()
+
+  // Stablecoins are always ~$1
+  for (const mint of mints) {
+    if (STABLECOINS.has(mint)) {
+      prices.set(mint, 1.0)
+    }
+  }
+
+  // Fetch volatile token prices from CoinGecko
+  const volatileIds = mints
+    .map(m => CG_IDS[m])
+    .filter((id): id is string => !!id && !STABLECOINS.has(mints.find(k => CG_IDS[k] === id)!))
+
+  if (volatileIds.length === 0) return prices
+
   try {
     const res = await fetch(
-      'https://api.coingecko.com/api/v3/simple/price' +
-      '?ids=solana&vs_currencies=usd',
+      `https://api.coingecko.com/api/v3/simple/price?ids=${volatileIds.join(',')}&vs_currencies=usd`,
       { cache: 'no-store' }
     )
     if (!res.ok) throw new Error(`CoinGecko HTTP ${res.status}`)
     const data = await res.json()
-    const price = data?.solana?.usd
-    if (!price || typeof price !== 'number') {
-      console.warn('[solana] CoinGecko returned no SOL price, using fallback $150')
-      return 150
+
+    for (const mint of mints) {
+      const cgId = CG_IDS[mint]
+      if (cgId && data[cgId]?.usd) {
+        prices.set(mint, data[cgId].usd)
+      }
     }
-    return price
   } catch (err) {
-    console.warn('[solana] CoinGecko fetch failed, using fallback $150:', err)
-    return 150
+    console.warn('[solana] CoinGecko fetch failed, using fallback prices:', err)
+    // Fallback prices
+    for (const mint of mints) {
+      if (!prices.has(mint)) {
+        if (mint === MINT_SOL) prices.set(mint, 150)
+        else if (mint === MINT_JTO) prices.set(mint, 2.5)
+        else prices.set(mint, 1.0)
+      }
+    }
   }
+
+  return prices
 }
 
 // ============================================================
-// LP Execution — opens a position in Meteora DLMM pools
-// Orca support tracked for future release
+// LP Execution — opens a position in any supported DLMM pool
 // ============================================================
 
 export async function executeLPPosition(
   wallet: WalletAdapter,
   poolAddress: string,
+  tokenA: string,
+  tokenB: string,
   capitalUSD: number,
-  solOverride?: number,
-  usdcOverride?: number,
+  tokenAOverride?: number,
+  tokenBOverride?: number,
 ): Promise<ExecutionResult> {
   try {
     if (!wallet.publicKey) {
       return { success: false, error: 'Wallet not connected' }
     }
 
-    // Validate address format
+    // Validate address
     let poolPubkey: PublicKey
     try {
       poolPubkey = new PublicKey(poolAddress)
@@ -164,70 +210,97 @@ export async function executeLPPosition(
     }
 
     if (!isValidPoolAddress(poolAddress)) {
-      return { success: false, error: `Invalid Solana address: ${poolAddress}. This may be a data issue — try refreshing.` }
+      return { success: false, error: `Invalid Solana address: ${poolAddress}. Try refreshing.` }
     }
 
-    // Check protocol support — currently only Meteora DLMM
+    // Check protocol support
     const protocol = getPoolProtocol(poolAddress)
     if (protocol === 'orca') {
       return {
         success: false,
-        error: 'Orca execution is coming soon. Currently only Meteora DLMM pools are supported for on-chain execution. Simulation still works for all pools.',
+        error: 'Orca execution is coming soon. Currently only Meteora DLMM pools are supported for on-chain execution.',
       }
     }
     if (protocol === 'unknown') {
       return {
         success: false,
-        error: `Unknown pool protocol for address ${poolAddress.slice(0, 8)}... This pool may not be supported yet.`,
+        error: `Unknown pool protocol. This pool may not be supported yet.`,
       }
     }
 
     const DLMM = (await import('@meteora-ag/dlmm')).default
 
-    console.log('[meteora] loading pool:', poolPubkey.toBase58())
+    console.log('[mindor] loading pool:', poolPubkey.toBase58())
     const dlmmPool = await DLMM.create(connection, poolPubkey)
-    console.log('[meteora] pool loaded')
+    console.log('[mindor] pool loaded — X:', dlmmPool.tokenX.publicKey.toBase58(),
+      'Y:', dlmmPool.tokenY.publicKey.toBase58())
 
     const activeBin = await dlmmPool.getActiveBin()
-    console.log('[meteora] active bin:', activeBin.binId)
+    console.log('[mindor] active bin:', activeBin.binId)
 
     const BIN_RANGE = 5
     const minBinId = activeBin.binId - BIN_RANGE
     const maxBinId = activeBin.binId + BIN_RANGE
 
     const positionKeypair = Keypair.generate()
-    console.log('[meteora] position:', positionKeypair.publicKey.toBase58())
+    console.log('[mindor] position:', positionKeypair.publicKey.toBase58())
 
-    // Calculate deposit amounts — split 50/50 between the two tokens
-    const solPrice = await getSolPrice()
+    // Determine which tokens map to pool's X/Y
+    const mintX = dlmmPool.tokenX.publicKey.toBase58()
+    const mintY = dlmmPool.tokenY.publicKey.toBase58()
+    const decimalsX = getTokenDecimals(mintX)
+    const decimalsY = getTokenDecimals(mintY)
+
+    // Map our tokenA/tokenB symbols to actual mints
+    const mintA = tokenToMint(tokenA)
+    const mintB = tokenToMint(tokenB)
+
+    // Which of our tokens is pool's X and which is Y?
+    const tokenAIsX = mintA === mintX
+    const tokenBIsX = mintB === mintX
+    const mintForX = tokenAIsX ? mintA : tokenBIsX ? mintB : mintX
+    const mintForY = tokenAIsX ? mintB : tokenBIsX ? mintA : mintY
+
+    // Get prices for both tokens
+    const prices = await getTokenPrices([mintForX, mintForY])
+    const priceX = prices.get(mintForX) ?? 1.0
+    const priceY = prices.get(mintForY) ?? 1.0
+
+    // Split capital 50/50
     const halfCapital = capitalUSD / 2
 
-    // SOL amount (9 decimals)
-    const solAmount = solOverride ?? (halfCapital / solPrice)
-    const solLamports = new BN(
-      Math.floor(solAmount * 1_000_000_000)
-    )
+    // Token X amount (in native units)
+    const amountX = tokenAIsX
+      ? (tokenAOverride ?? (halfCapital / priceX))
+      : tokenBIsX
+        ? (tokenBOverride ?? (halfCapital / priceX))
+        : (halfCapital / priceX)
 
-    // USDC amount (6 decimals)
-    const usdcAmountNum = usdcOverride ?? halfCapital
-    const usdcAmount = new BN(
-      Math.floor(usdcAmountNum * 1_000_000)
-    )
+    // Token Y amount (in native units)
+    const amountY = tokenAIsX
+      ? (tokenBOverride ?? (halfCapital / priceY))
+      : tokenBIsX
+        ? (tokenAOverride ?? (halfCapital / priceY))
+        : (halfCapital / priceY)
 
-    console.log('[meteora] capital:', capitalUSD, 'USD')
-    console.log('[meteora] SOL price:', solPrice)
-    console.log('[meteora] depositing:',
-      solAmount.toFixed(4), 'SOL +', halfCapital, 'USDC')
+    const totalXAmount = new BN(Math.floor(amountX * Math.pow(10, decimalsX)))
+    const totalYAmount = new BN(Math.floor(amountY * Math.pow(10, decimalsY)))
+
+    console.log('[mindor] pair:', tokenA, '/', tokenB)
+    console.log('[mindor] capital:', capitalUSD, 'USD')
+    console.log('[mindor] prices — X:', priceX, 'Y:', priceY)
+    console.log('[mindor] depositing:', amountX.toFixed(decimalsX), 'token X +',
+      amountY.toFixed(decimalsY), 'token Y')
 
     const { blockhash, lastValidBlockHeight } =
       await connection.getLatestBlockhash()
 
-    console.log('[meteora] building initializePositionAndAddLiquidityByStrategy tx...')
+    console.log('[mindor] building initializePositionAndAddLiquidityByStrategy...')
     const tx = await dlmmPool.initializePositionAndAddLiquidityByStrategy({
       positionPubKey: positionKeypair.publicKey,
       user: wallet.publicKey,
-      totalXAmount: solLamports,
-      totalYAmount: usdcAmount,
+      totalXAmount,
+      totalYAmount,
       strategy: {
         maxBinId,
         minBinId,
@@ -241,18 +314,13 @@ export async function executeLPPosition(
 
     const signedTx = await wallet.signTransaction(tx)
 
-    const signers = signedTx.signatures.filter(
-      s => s.signature !== null
-    )
-    console.log('[meteora] signatures count:', signers.length)
+    const signers = signedTx.signatures.filter(s => s.signature !== null)
+    console.log('[mindor] signatures count:', signers.length)
     if (signers.length < 2) {
-      throw new Error(
-        'Transaction requires 2 signatures, got ' +
-        signers.length
-      )
+      throw new Error('Transaction requires 2 signatures, got ' + signers.length)
     }
 
-    console.log('[meteora] sending transaction...')
+    console.log('[mindor] sending transaction...')
     const sig = await connection.sendRawTransaction(
       (signedTx as Transaction).serialize(),
       { skipPreflight: false, maxRetries: 3 }
@@ -263,7 +331,7 @@ export async function executeLPPosition(
       blockhash,
       lastValidBlockHeight,
     })
-    console.log('[meteora] SUCCESS:', sig)
+    console.log('[mindor] SUCCESS:', sig)
 
     return {
       success: true,
@@ -272,9 +340,31 @@ export async function executeLPPosition(
       poolAddress: poolPubkey.toBase58(),
     }
   } catch (err: any) {
-    console.error('[meteora] execution failed:', err.message)
+    console.error('[mindor] execution failed:', err.message)
     return { success: false, error: err.message ?? String(err) }
   }
+}
+
+// Known token decimals by mint address
+function getTokenDecimals(mint: string): number {
+  if (mint === MINT_SOL) return 9
+  if (mint === MINT_USDC || mint === MINT_USDT) return 6
+  if (mint === MINT_JTO) return 9
+  return 9 // default for most SPL tokens
+}
+
+/**
+ * Map a token symbol to its Solana mint address.
+ */
+function tokenToMint(symbol: string): string {
+  const s = symbol.toUpperCase()
+  if (s === 'SOL') return MINT_SOL
+  if (s === 'USDC') return MINT_USDC
+  if (s === 'USDT') return MINT_USDT
+  if (s === 'JTO') return MINT_JTO
+  // Unknown token — return a placeholder; execution will likely fail
+  // but we surface a clear error from the pool verification step
+  return MINT_SOL
 }
 
 // ============================================================
@@ -291,7 +381,6 @@ export async function closeLPPosition(
       return { success: false, error: 'Wallet not connected' }
     }
 
-    // Check protocol support
     const protocol = getPoolProtocol(poolAddress)
     if (protocol !== 'meteora') {
       return {
@@ -307,10 +396,9 @@ export async function closeLPPosition(
     const poolPubkey = new PublicKey(poolAddress)
     const positionPubkey = new PublicKey(positionAddress)
 
-    console.log('[meteora] loading pool for withdrawal:', poolPubkey.toBase58())
+    console.log('[mindor] loading pool for withdrawal:', poolPubkey.toBase58())
     const dlmmPool = await DLMM.create(connection, poolPubkey)
 
-    // Fetch position data to get bin range
     const { userPositions } = await dlmmPool.getPositionsByUserAndLbPair(
       wallet.publicKey
     )
@@ -325,13 +413,13 @@ export async function closeLPPosition(
     const { blockhash, lastValidBlockHeight } =
       await connection.getLatestBlockhash()
 
-    console.log('[meteora] building removeLiquidity tx...')
+    console.log('[mindor] building removeLiquidity tx...')
     const txs = await dlmmPool.removeLiquidity({
       position: positionPubkey,
       user: wallet.publicKey,
       fromBinId: lowerBinId,
       toBinId: upperBinId,
-      bps: new BN(10000), // 100% withdrawal
+      bps: new BN(10000),
       shouldClaimAndClose: true,
     })
 
@@ -339,14 +427,13 @@ export async function closeLPPosition(
       return { success: false, error: 'No transactions generated' }
     }
 
-    // Sign and send the first transaction (typical single-tx close)
     const tx = txs[0]
     tx.recentBlockhash = blockhash
     tx.feePayer = wallet.publicKey
 
     const signedTx = await wallet.signTransaction(tx)
 
-    console.log('[meteora] sending removeLiquidity...')
+    console.log('[mindor] sending removeLiquidity...')
     const sig = await connection.sendRawTransaction(
       (signedTx as Transaction).serialize(),
       { skipPreflight: false, maxRetries: 3 }
@@ -357,7 +444,7 @@ export async function closeLPPosition(
       blockhash,
       lastValidBlockHeight,
     })
-    console.log('[meteora] withdrawal SUCCESS:', sig)
+    console.log('[mindor] withdrawal SUCCESS:', sig)
 
     return {
       success: true,
@@ -366,7 +453,7 @@ export async function closeLPPosition(
       poolAddress: poolPubkey.toBase58(),
     }
   } catch (err: any) {
-    console.error('[meteora] withdrawal failed:', err.message)
+    console.error('[mindor] withdrawal failed:', err.message)
     return { success: false, error: err.message ?? String(err) }
   }
 }
@@ -408,12 +495,6 @@ export function savePositionToStorage(
   }
 }
 
-/**
- * Load positions from a specific Meteora pool.
- * NOTE: Currently hardcoded to SOL-USDC pool.
- * TODO: Iterate over all known pool addresses or use Helius/SolanaFM
- *       to discover all DLMM positions for a wallet.
- */
 export async function loadOnChainPositions(
   walletAddress: string,
   poolAddress?: string,

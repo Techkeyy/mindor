@@ -31,11 +31,11 @@ export default function ExecutionModal({
   const [errorMsg, setErrorMsg] = useState<string>("");
   const color = STRATEGY_COLORS[strategy.label];
 
-  // Derived defaults from capitalUSD — only used for initial values
-  const defaultSol = ((capitalUSD / 2) / 150).toFixed(4);
-  const defaultUsdc = (capitalUSD / 2).toFixed(2);
-  const [solInput, setSolInput] = useState<string>(defaultSol);
-  const [usdcInput, setUsdcInput] = useState<string>(defaultUsdc);
+  // Derived defaults from capitalUSD — split 50/50
+  const defaultTokenAAmt = ((capitalUSD / 2) / 150).toFixed(4);
+  const defaultTokenBAmt = (capitalUSD / 2).toFixed(2);
+  const [tokenAInput, setTokenAInput] = useState<string>(defaultTokenAAmt);
+  const [tokenBInput, setTokenBInput] = useState<string>(defaultTokenBAmt);
 
   const handleConnect = async () => {
     setStep("connecting");
@@ -57,15 +57,17 @@ export default function ExecutionModal({
     setStep("executing");
 
     // Pass the user's edited deposit amounts
-    const solOverride = parseFloat(solInput) || undefined;
-    const usdcOverride = parseFloat(usdcInput) || undefined;
+    const tokenAOverride = parseFloat(tokenAInput) || undefined;
+    const tokenBOverride = parseFloat(tokenBInput) || undefined;
 
     const result = await executeLPPosition(
       walletAdapter,
       strategy.pool.address,
+      strategy.pool.tokenA,
+      strategy.pool.tokenB,
       capitalUSD,
-      solOverride,
-      usdcOverride,
+      tokenAOverride,
+      tokenBOverride,
     );
     setTxResult(result);
     if (result.success) {
@@ -155,20 +157,20 @@ export default function ExecutionModal({
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div>
-                  <div style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace", marginBottom: 4 }}>SOL AMOUNT</div>
-                  <input type="number" value={solInput} onChange={e => setSolInput(e.target.value)} step="0.001" min="0.001"
+                  <div style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace", marginBottom: 4 }}>{strategy.pool.tokenA} AMOUNT</div>
+                  <input type="number" value={tokenAInput} onChange={e => setTokenAInput(e.target.value)} step="0.001" min="0.001"
                     style={{ width: "100%", background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)", borderRadius: 6, padding: "8px 10px", color: "var(--text-primary)", fontFamily: "monospace", fontSize: 14, outline: "none", boxSizing: "border-box" as const }}
                   />
                 </div>
                 <div>
-                  <div style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace", marginBottom: 4 }}>USDC AMOUNT</div>
-                  <input type="number" value={usdcInput} onChange={e => setUsdcInput(e.target.value)} step="0.1" min="0.1"
+                  <div style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "monospace", marginBottom: 4 }}>{strategy.pool.tokenB} AMOUNT</div>
+                  <input type="number" value={tokenBInput} onChange={e => setTokenBInput(e.target.value)} step="0.1" min="0.1"
                     style={{ width: "100%", background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)", borderRadius: 6, padding: "8px 10px", color: "var(--text-primary)", fontFamily: "monospace", fontSize: 14, outline: "none", boxSizing: "border-box" as const }}
                   />
                 </div>
               </div>
               <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 8, fontFamily: "monospace" }}>
-                Estimated total: ~${(parseFloat(solInput || "0") * 150 + parseFloat(usdcInput || "0")).toFixed(2)} USD
+                Estimated total: ~${(parseFloat(tokenAInput || "0") * 150 + parseFloat(tokenBInput || "0")).toFixed(2)} USD
               </div>
             </div>
             <div style={{ display: "flex", gap: 10 }}>
