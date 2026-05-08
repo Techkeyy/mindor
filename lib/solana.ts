@@ -9,7 +9,7 @@ import {
   VersionedTransaction,
 } from '@solana/web3.js'
 import BN from 'bn.js'
-import { isValidPoolAddress } from './defillama'
+import { isValidPoolAddress, getPoolProtocol } from './defillama'
 
 export const connection = new Connection(
   process.env.NEXT_PUBLIC_SOLANA_RPC ??
@@ -139,7 +139,8 @@ async function getSolPrice(): Promise<number> {
 }
 
 // ============================================================
-// LP Execution — opens a position in the selected Meteora pool
+// LP Execution — opens a position in Meteora DLMM pools
+// Orca support tracked for future release
 // ============================================================
 
 export async function executeLPPosition(
@@ -154,9 +155,7 @@ export async function executeLPPosition(
       return { success: false, error: 'Wallet not connected' }
     }
 
-    const DLMM = (await import('@meteora-ag/dlmm')).default
-
-    // Parse the pool address from the strategy — use the pool the user actually selected
+    // Validate address format
     let poolPubkey: PublicKey
     try {
       poolPubkey = new PublicKey(poolAddress)
@@ -164,10 +163,26 @@ export async function executeLPPosition(
       return { success: false, error: `Invalid pool address: ${poolAddress}` }
     }
 
-    // Extra guard: reject obviously fake addresses (DefiLlama UUIDs, etc.)
     if (!isValidPoolAddress(poolAddress)) {
-      return { success: false, error: `Invalid Solana address: ${poolAddress}. This may be a data issue — try refreshing or check the pool.` }
+      return { success: false, error: `Invalid Solana address: ${poolAddress}. This may be a data issue — try refreshing.` }
     }
+
+    // Check protocol support — currently only Meteora DLMM
+    const protocol = getPoolProtocol(poolAddress)
+    if (protocol === 'orca') {
+      return {
+        success: false,
+        error: 'Orca execution is coming soon. Currently only Meteora DLMM pools are supported for on-chain execution. Simulation still works for all pools.',
+      }
+    }
+    if (protocol === 'unknown') {
+      return {
+        success: false,
+        error: `Unknown pool protocol for address ${poolAddress.slice(0, 8)}... This pool may not be supported yet.`,
+      }
+    }
+
+    const DLMM = (await import('@meteora-ag/dlmm')).default
 
     console.log('[meteora] loading pool:', poolPubkey.toBase58())
     const dlmmPool = await DLMM.create(connection, poolPubkey)
@@ -263,7 +278,7 @@ export async function executeLPPosition(
 }
 
 // ============================================================
-// Withdraw / Close Position
+// Withdraw / Close Position (Meteora DLMM only)
 // ============================================================
 
 export async function closeLPPosition(
@@ -274,6 +289,17 @@ export async function closeLPPosition(
   try {
     if (!wallet.publicKey) {
       return { success: false, error: 'Wallet not connected' }
+    }
+
+    // Check protocol support
+    const protocol = getPoolProtocol(poolAddress)
+    if (protocol !== 'meteora') {
+      return {
+        success: false,
+        error: protocol === 'orca'
+          ? 'Orca withdrawal is coming soon.'
+          : 'Withdrawal only supported for known Meteora DLMM pools.',
+      }
     }
 
     const DLMM = (await import('@meteora-ag/dlmm')).default

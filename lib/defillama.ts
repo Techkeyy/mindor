@@ -47,6 +47,16 @@ export function isValidPoolAddress(addr: string): boolean {
   return BASE58.test(addr)
 }
 
+/** Determine which protocol a pool address belongs to */
+export function getPoolProtocol(addr: string): 'meteora' | 'orca' | 'unknown' {
+  for (const [key, address] of Object.entries(KNOWN_POOL_ADDRESSES)) {
+    if (address === addr) {
+      return key.startsWith('meteora:') ? 'meteora' : 'orca'
+    }
+  }
+  return 'unknown'
+}
+
 // DefiLlama raw pool shape (partial)
 type LlamaPool = {
   pool: string
