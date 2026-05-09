@@ -225,7 +225,8 @@ export default function ExecutionModal({
                 </div>
               </div>
               <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 8, fontFamily: "monospace" }}>
-                Estimated total: ~${(parseFloat(tokenAInput || "0") * 150 + parseFloat(tokenBInput || "0")).toFixed(2)} USD
+                Estimated value: ~${((parseFloat(tokenAInput || "0") * (strategy.pool.tokenA === "SOL" ? 150 : 1)) + (parseFloat(tokenBInput || "0") * (strategy.pool.tokenB === "SOL" ? 150 : 1))).toFixed(2)} USD
+                <br /><span style={{ color: "#FBBF24" }}>⚠ ~0.058 SOL position rent (refundable on close)</span>
               </div>
             </div>
             <div style={{ display: "flex", gap: 10 }}>
@@ -281,6 +282,9 @@ export default function ExecutionModal({
             <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 6 }}>Confirm Transaction</div>
             <div style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 24, lineHeight: 1.6 }}>
               Add liquidity to {strategy.pool.tokenA}/{strategy.pool.tokenB} pool on {strategy.pool.protocol} with ${capitalUSD.toLocaleString()} capital.
+            </div>
+            <div style={{ fontSize: 10, color: "#FBBF24", background: "#FBBF2411", border: "1px solid #FBBF2433", borderRadius: 6, padding: "8px 12px", marginBottom: 16, fontFamily: "monospace", lineHeight: 1.5 }}>
+              ⚠ <strong>Position rent:</strong> Creating a DLMM position costs ~0.058 SOL in rent (refundable when you close). This is in addition to your deposit.
             </div>
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={onClose} style={{ flex: 1, padding: "12px", background: "transparent", border: "1px solid var(--border-subtle)", borderRadius: 10, color: "var(--text-secondary)", fontSize: 13, cursor: "pointer", fontFamily: "monospace" }}>

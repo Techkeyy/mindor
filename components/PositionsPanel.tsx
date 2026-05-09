@@ -14,6 +14,9 @@ export type Position = {
   timestamp: Date;
   capitalUSD: number;
   poolAddress?: string;
+  positionAddress?: string;
+  lowerBinId?: number;
+  upperBinId?: number;
   pnl?: PositionPnL | null;
   pnlLoading?: boolean;
 };
@@ -24,6 +27,7 @@ type PositionsPanelProps = {
   onRefreshPnl?: (position: Position) => void;
   onDismiss?: (position: Position) => void;
   onClaimFees?: (position: Position) => void;
+  onMonitor?: (position: Position) => void;
 };
 
 const currency = (n: number) =>
@@ -52,6 +56,7 @@ export default function PositionsPanel({
   onRefreshPnl,
   onDismiss,
   onClaimFees,
+  onMonitor,
 }: PositionsPanelProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
@@ -209,12 +214,12 @@ export default function PositionsPanel({
                       ? "..."
                       : pnl
                         ? `${pnl.pnl >= 0 ? "+" : ""}${currency(pnl.pnl)}`
-                        : currency(pos.capitalUSD)}
+                        : "—"}
                   </div>
                   <div style={{ fontSize: 9, color: "var(--text-muted)", fontFamily: "monospace" }}>
                     {pnl && !pos.pnlLoading
                       ? `${pnl.roi >= 0 ? "+" : ""}${pnl.roi.toFixed(2)}%`
-                      : "deposited"}
+                      : pos.pnlLoading ? "loading" : "tap for details"}
                   </div>
                 </div>
 
@@ -418,6 +423,32 @@ export default function PositionsPanel({
                         >
                           ↗ EXPLORER
                         </a>
+
+                        {/* Monitor */}
+                        {onMonitor && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onMonitor(pos);
+                            }}
+                            style={{
+                              padding: "6px 14px",
+                              borderRadius: 6,
+                              border: "1px solid #FBBF24",
+                              background: "transparent",
+                              color: "#FBBF24",
+                              fontSize: 10,
+                              fontFamily: "monospace",
+                              letterSpacing: "0.1em",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 6,
+                            }}
+                          >
+                            🔔 MONITOR
+                          </button>
+                        )}
 
                         {/* Claim Fees */}
                         {onClaimFees && pos.pnl && pos.pnl.unclaimedFees > 0 && (

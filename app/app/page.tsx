@@ -41,6 +41,8 @@ type Position = {
   capitalUSD: number;
   positionAddress?: string;
   poolAddress?: string;
+  lowerBinId?: number;
+  upperBinId?: number;
   pnl?: PositionPnL | null;
   pnlLoading?: boolean;
 };
@@ -129,7 +131,7 @@ export default function AppPage() {
     try {
       const poolAddr = position.poolAddress ?? "5rCf1DM8LjKTw4YqhnoLcngyZYeNnQqztScTogYHAS6";
       const posAddr = position.positionAddress ?? position.signature;
-      const result = await fetchPositionPnL(poolAddr, posAddr, position.capitalUSD);
+      const result = await fetchPositionPnL(poolAddr, posAddr, position.capitalUSD, connectedWallet ?? undefined);
 
       setPositions(prev =>
         prev.map(p =>
@@ -243,6 +245,9 @@ export default function AppPage() {
         timestamp: new Date(),
         capitalUSD: simResult?.intent.capitalUSD ?? 0,
         poolAddress: poolAddr,
+        positionAddress: txData.positionAddress,
+        lowerBinId: txData.lowerBinId,
+        upperBinId: txData.upperBinId,
       };
       setPositions(prev => [newPosition, ...prev]);
 
@@ -291,6 +296,36 @@ export default function AppPage() {
     setPositions(prev => prev.filter(p => p.id !== position.id));
     if (connectedWallet) {
       removePositionFromStorage(connectedWallet, position.id);
+    }
+  };
+
+  const handleMonitor = async (position: Position) => {
+    // Build deep-link: opens @mindorr_bot with position data auto-filled
+    const data = [
+      position.positionAddress ?? position.signature,
+      position.poolAddress ?? '',
+      position.lowerBinId ?? 0,
+      position.upperBinId ?? 0,
+    ].join('_')
+    
+    const deepLink = `https://t.me/mindorr_bot?start=mon_${data}`
+    
+    // Try to open Telegram directly
+    const opened = window.open(deepLink, '_blank')
+    
+    if (opened) {
+      alert(
+        "🔔 Opening Telegram...\n\n" +
+        "Send the pre-filled message to @mindorr_bot " +
+        "to enable position monitoring."
+      )
+    } else {
+      // Fallback: copy link
+      await navigator.clipboard.writeText(deepLink)
+      alert(
+        "🔔 Monitoring link copied!\n\n" +
+        "Open t.me/mindorr_bot and paste to enable alerts."
+      )
     }
   };
 
@@ -496,7 +531,7 @@ export default function AppPage() {
 
         {/* RIGHT PANEL */}
         <div className="mindor-right-panel" style={{ flex: 1, overflow: "hidden", position: "relative", display: "flex", flexDirection: "column" }}>
-          <PositionsPanel positions={positions} onWithdraw={handleWithdraw} onRefreshPnl={handleRefreshPnl} onDismiss={handleDismiss} onClaimFees={handleClaimFees} />
+          <PositionsPanel positions={positions} onWithdraw={handleWithdraw} onRefreshPnl={handleRefreshPnl} onDismiss={handleDismiss} onClaimFees={handleClaimFees} onMonitor={handleMonitor} />
           <div style={{ flex: 1, overflow: "auto", position: "relative" }}>
             <AnimatePresence mode="wait">
               {!simResult && !loading && (

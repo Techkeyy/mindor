@@ -32,6 +32,9 @@ export type ExecutionResult = {
   explorerUrl?: string
   error?: string
   poolAddress?: string
+  positionAddress?: string
+  lowerBinId?: number
+  upperBinId?: number
   tokenA?: string
   tokenB?: string
 }
@@ -205,18 +208,33 @@ export async function fetchPositionPnL(
   poolAddress: string,
   positionAddress: string,
   capitalUSD: number,
+  ownerAddress?: string,
 ): Promise<PositionPnL> {
   try {
     if (!isValidPoolAddress(poolAddress)) {
       return zeroPnL(capitalUSD, 'Invalid pool address')
     }
-    if (!isValidPoolAddress(positionAddress)) {
-      return zeroPnL(capitalUSD, 'Invalid position address')
-    }
 
     const DLMM = (await import('@meteora-ag/dlmm')).default
     const poolPubkey = new PublicKey(poolAddress)
-    const positionPubkey = new PublicKey(positionAddress)
+
+    // Resolve position: use stored address if valid, otherwise derive from pool + wallet
+    let positionPubkey: PublicKey
+    if (isValidPoolAddress(positionAddress)) {
+      positionPubkey = new PublicKey(positionAddress)
+    } else if (ownerAddress && isValidPoolAddress(ownerAddress)) {
+      console.log('[pnl] positionAddress invalid, deriving from pool + wallet')
+      const tempPool = await DLMM.create(connection, poolPubkey)
+      const owner = new PublicKey(ownerAddress)
+      const { userPositions } = await tempPool.getPositionsByUserAndLbPair(owner)
+      if (userPositions.length === 0) {
+        return zeroPnL(capitalUSD, 'No positions found for wallet in this pool')
+      }
+      positionPubkey = userPositions[0].publicKey
+      console.log('[pnl] derived position:', positionPubkey.toBase58())
+    } else {
+      return zeroPnL(capitalUSD, 'Invalid position address — connect wallet to auto-discover')
+    }
 
     console.log('[pnl] loading pool:', poolPubkey.toBase58())
     const dlmmPool = await DLMM.create(connection, poolPubkey)
@@ -472,6 +490,9 @@ export async function executeLPPosition(
       signature: sig,
       explorerUrl: `https://explorer.solana.com/tx/${sig}`,
       poolAddress: poolPubkey.toBase58(),
+      positionAddress: positionKeypair.publicKey.toBase58(),
+      lowerBinId: minBinId,
+      upperBinId: maxBinId,
     }
   } catch (err: any) {
     const msg = err?.message ?? String(err)
@@ -539,8 +560,16 @@ export async function closeLPPosition(
 
     const DLMM = (await import('@meteora-ag/dlmm')).default
 
+    let positionPubkey: PublicKey
+    try {
+      positionPubkey = new PublicKey(positionAddress)
+    } catch {
+      // positionAddress might be a tx signature or empty — derive from pool
+      console.log('[mindor] positionAddress invalid, deriving from pool + wallet')
+      positionPubkey = PublicKey.default
+    }
+
     const poolPubkey = new PublicKey(poolAddress)
-    const positionPubkey = new PublicKey(positionAddress)
 
     console.log('[mindor] loading pool for withdrawal:', poolPubkey.toBase58())
     const dlmmPool = await DLMM.create(connection, poolPubkey)
@@ -548,9 +577,20 @@ export async function closeLPPosition(
     const { userPositions } = await dlmmPool.getPositionsByUserAndLbPair(
       wallet.publicKey
     )
-    const posData = userPositions.find(
+
+    if (userPositions.length === 0) {
+      return { success: false, error: 'No positions found for this wallet in this pool' }
+    }
+
+    // If positionAddress was valid, find matching; otherwise use first position
+    let posData = userPositions.find(
       (p) => p.publicKey.toBase58() === positionPubkey.toBase58()
     )
+    if (!posData) {
+      posData = userPositions[0]
+      positionPubkey = posData.publicKey
+      console.log('[mindor] using first position:', positionPubkey.toBase58())
+    }
     if (!posData) {
       return { success: false, error: 'Position not found for this wallet' }
     }
@@ -625,7 +665,19 @@ export async function claimPositionFees(
 
     const DLMM = (await import('@meteora-ag/dlmm')).default
     const poolPubkey = new PublicKey(poolAddress)
-    const positionPubkey = new PublicKey(positionAddress)
+
+    let positionPubkey: PublicKey
+    try {
+      positionPubkey = new PublicKey(positionAddress)
+    } catch {
+      // derive from pool + wallet
+      const tempPool = await DLMM.create(connection, poolPubkey)
+      const { userPositions } = await tempPool.getPositionsByUserAndLbPair(wallet.publicKey)
+      if (userPositions.length === 0) {
+        return { success: false, error: 'No positions found for this wallet in this pool' }
+      }
+      positionPubkey = userPositions[0].publicKey
+    }
 
     const dlmmPool = await DLMM.create(connection, poolPubkey)
     const lbPosition = await dlmmPool.getPosition(positionPubkey)

@@ -131,6 +131,9 @@ export default function StrategyCardComponent({
       <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.6 }}>
         {strategy.recommendation}
       </div>
+      <div style={{ fontSize: 9, color: "#FBBF24", fontFamily: "monospace", lineHeight: 1.5, padding: "6px 10px", background: "rgba(251,191,36,0.08)", borderRadius: 6, border: "1px solid rgba(251,191,36,0.15)" }}>
+        ⚠ IL estimates use constant-product AMM math — Meteora DLMM bins have different risk profiles. Treat as directional.
+      </div>
     </motion.div>
   );
 }

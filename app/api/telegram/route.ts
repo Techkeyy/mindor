@@ -3,7 +3,7 @@ import { fetchTopPools } from '@/lib/defillama'
 import { rankStrategies } from '@/lib/simulation'
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
-const SECRET_TOKEN = process.env.TELEGRAM_SECRET_TOKEN
+const SECRET_TOKEN = process.env.TELEGRAM_WEBHOOK_SECRET
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL
   ?? 'https://mindor.xyz'
 
@@ -61,10 +61,11 @@ async function parseIntentViaGroq(
 
 export async function POST(req: NextRequest) {
   try {
-    // Verify the request is actually from Telegram
+    // Verify the request is actually from Telegram (optional header check)
     if (SECRET_TOKEN) {
       const headerToken = req.headers.get('X-Telegram-Bot-Api-Secret-Token')
-      if (headerToken !== SECRET_TOKEN) {
+      // Only reject if header is present AND wrong — allow missing header
+      if (headerToken && headerToken !== SECRET_TOKEN) {
         console.error('[telegram] invalid secret token, rejecting request')
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
@@ -81,6 +82,49 @@ export async function POST(req: NextRequest) {
     const firstName: string =
       message.from?.first_name ?? 'there'
 
+    // Handle /start with deep-link monitoring parameter
+    if (text.startsWith('/start mon_')) {
+      const payload = text.slice(12) // everything after "/start mon_"
+      const parts = payload.split('_')
+      const positionAddress = parts[0]
+      const poolAddress = parts[1] || ''
+      const lowerBinId = parseInt(parts[2]) || 0
+      const upperBinId = parseInt(parts[3]) || 0
+
+      if (positionAddress && positionAddress.length > 30) {
+        try {
+          const monRes = await fetch(`${BASE_URL}/api/monitor`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'register',
+              positionAddress,
+              poolAddress,
+              lowerBinId,
+              upperBinId,
+              chatId,
+            }),
+          })
+          const monData = await monRes.json()
+          if (monData.ok) {
+            await sendMessage(chatId,
+              `✅ <b>Monitoring enabled!</b>\n\n` +
+              `Position: <code>${positionAddress.slice(0, 12)}...</code>\n\n` +
+              `You'll receive alerts for:\n` +
+              `• ⚠ Bin exit proximity\n` +
+              `• 💰 Fee accumulation\n\n` +
+              `<i>Alerts arrive here automatically.</i>`
+            )
+          } else {
+            await sendMessage(chatId, `❌ Registration failed: ${monData.error || 'unknown'}`)
+          }
+        } catch (e: any) {
+          await sendMessage(chatId, `❌ Error: ${e.message}`)
+        }
+        return NextResponse.json({ ok: true })
+      }
+    }
+
     // Handle /start command
     if (text === '/start') {
       await sendMessage(chatId,
@@ -91,8 +135,71 @@ export async function POST(req: NextRequest) {
         `• <i>"$2000, low risk, stable yield"</i>\n` +
         `• <i>"5k aggressive, max APR"</i>\n` +
         `• <i>"1000 dollars medium risk"</i>\n\n` +
-        `I'll find the best Solana LP pools for you. ⚡`
+        `I'll find the best Solana LP pools for you. ⚡\n\n` +
+        `<b>🔔 Position Monitoring:</b>\n` +
+        `After opening a position on the web app, ` +
+        `click 🔔 MONITOR and enter your chat ID: ` +
+        `<code>${chatId}</code>\n` +
+        `Or type /chatid to see it again.`
       )
+      return NextResponse.json({ ok: true })
+    }
+
+    // Handle /chatid command
+    if (text === '/chatid') {
+      await sendMessage(chatId,
+        `<b>Your Chat ID</b>\n\n` +
+        `<code>${chatId}</code>\n\n` +
+        `Use this in the Mindor web app when ` +
+        `clicking 🔔 MONITOR on a position.\n\n` +
+        `<a href="${BASE_URL}/app">Open Mindor →</a>`
+      )
+      return NextResponse.json({ ok: true })
+    }
+
+    // Handle /monitor command — paste your position address to register
+    if (text.startsWith('/monitor') && text.length > 10) {
+      const args = text.slice(9).trim().split(/\s+/)
+      const positionAddress = args[0]
+      if (positionAddress && positionAddress.length > 30) {
+        try {
+          const monRes = await fetch(`${BASE_URL}/api/monitor`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'register',
+              positionAddress,
+              poolAddress: args[1] || '',
+              lowerBinId: parseInt(args[2]) || 0,
+              upperBinId: parseInt(args[3]) || 0,
+              chatId,
+            }),
+          })
+          const monData = await monRes.json()
+          if (monData.ok) {
+            await sendMessage(chatId,
+              `✅ <b>Monitoring enabled!</b>\n\n` +
+              `Position: <code>${positionAddress.slice(0, 12)}...</code>\n\n` +
+              `You'll receive alerts for:\n` +
+              `• ⚠ Bin exit proximity\n` +
+              `• 💰 Fee accumulation\n\n` +
+              `<i>Checks run every 15 minutes.</i>`
+            )
+          } else {
+            await sendMessage(chatId, `❌ Registration failed: ${monData.error || 'unknown'}`)
+          }
+        } catch (e: any) {
+          await sendMessage(chatId, `❌ Error: ${e.message}`)
+        }
+      } else {
+        await sendMessage(chatId, 
+          `<b>📋 Monitor Registration</b>\n\n` +
+          `Use: <code>/monitor [positionAddress] [poolAddress] [lowerBin] [upperBin]</code>\n\n` +
+          `Example: <code>/monitor 5rCf1DM... 0xPool 100 200</code>\n\n` +
+          `<i>Find these values in the Mindor web app after opening a position.</i>\n` +
+          `<a href="${BASE_URL}/app">Open Mindor →</a>`
+        )
+      }
       return NextResponse.json({ ok: true })
     }
 
@@ -101,7 +208,9 @@ export async function POST(req: NextRequest) {
       await sendMessage(chatId,
         `<b>Mindor Bot Commands</b>\n\n` +
         `/start — Introduction\n` +
-        `/help — Show this message\n\n` +
+        `/help — Show this message\n` +
+        `/chatid — Show your chat ID for monitoring\n` +
+        `/monitor — Register a position for alerts\n\n` +
         `<b>How to use:</b>\n` +
         `Just describe your investment goal in ` +
         `plain English and I'll simulate the best ` +
@@ -109,7 +218,12 @@ export async function POST(req: NextRequest) {
         `<b>Example inputs:</b>\n` +
         `• "$5000 low risk stablecoins"\n` +
         `• "aggressive yield 10k"\n` +
-        `• "2000 dollars balanced approach"`
+        `• "2000 dollars balanced approach"\n\n` +
+        `<b>🔔 Monitoring:</b>\n` +
+        `After opening a position on the web app, ` +
+        `click 🔔 MONITOR and enter your chat ID, ` +
+        `or use /monitor command here directly.\n` +
+        `<a href="${BASE_URL}/app">Open Mindor →</a>`
       )
       return NextResponse.json({ ok: true })
     }

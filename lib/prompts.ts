@@ -11,10 +11,10 @@ Shape:
 }
 
 Rules:
-- capitalUSD: extract exact dollar amount mentioned. 
-  Default 1000 if no amount found.
-  Examples: '$50' -> 50, '$2000' -> 2000, 
-  '5k' -> 5000, 'ten dollars' -> 10
+- capitalUSD: extract the EXACT dollar amount the user mentions.
+  Be precise — "$2" = 2, "$50" = 50, "$1,000" = 1000.
+  If user says "small amount" or "tiny", use 10.
+  Only default to 1000 if NO number or amount hint is present at all.
 - riskProfile: 
     low = safe/stable/stablecoins/conservative/protect
     high = aggressive/degen/max yield/risky/moon
