@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
 
     // Handle /start with deep-link monitoring parameter
     if (text.startsWith('/start mon_')) {
-      const payload = text.slice(12) // everything after "/start mon_"
+      const payload = text.slice('/start mon_'.length) // strip prefix — 11 chars
       const parts = payload.split('_')
       const positionAddress = parts[0]
       const poolAddress = parts[1] || ''
