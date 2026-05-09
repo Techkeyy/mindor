@@ -61,12 +61,11 @@ async function parseIntentViaGroq(
 
 export async function POST(req: NextRequest) {
   try {
-    // Verify the request is actually from Telegram (optional header check)
+    // Verify the request is from Telegram via secret token header
     if (SECRET_TOKEN) {
       const headerToken = req.headers.get('X-Telegram-Bot-Api-Secret-Token')
-      // Only reject if header is present AND wrong — allow missing header
-      if (headerToken && headerToken !== SECRET_TOKEN) {
-        console.error('[telegram] invalid secret token, rejecting request')
+      if (headerToken !== SECRET_TOKEN) {
+        console.error('[telegram] missing or invalid secret token, rejecting request')
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
     }

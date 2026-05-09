@@ -85,7 +85,9 @@ export function rankStrategies(
   pools: import('./defillama').Pool[],
   capitalUSD: number
 ): StrategyCard[] {
-  // Guard: if we couldn't find enough pools, pad with fallback (best-effort)
+  // Guard: if pools array is empty, return nothing
+  if (!pools || pools.length === 0) return []
+
   const safe = (idx: number) => pools[idx] ?? pools[pools.length - 1] ?? pools[0]
 
   const conservative = [...pools]

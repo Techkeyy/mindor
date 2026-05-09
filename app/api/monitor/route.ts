@@ -174,9 +174,16 @@ export async function GET() {
         const lbPosition = await dlmmPool.getPosition(positionPubkey)
         const pd = lbPosition.positionData
         if (pd) {
+          // Fee estimation uses CoinGecko price for SOL, USDC as $1
+          let solPrice = 150
+          try {
+            const cgRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd', { cache: 'no-store' })
+            const cgData = await cgRes.json()
+            solPrice = cgData?.solana?.usd ?? 150
+          } catch { /* use default */ }
           const feeX = (pd.feeX?.toNumber() ?? 0) / 1e9
           const feeY = (pd.feeY?.toNumber() ?? 0) / 1e6
-          const totalFees = (feeX * 150) + feeY // rough SOL + USDC estimate
+          const totalFees = (feeX * solPrice) + feeY
 
           const now = Date.now()
           if (totalFees >= FEE_ALERT_THRESHOLD && (now - pos.lastAlertedFees) > FEE_ALERT_COOLDOWN) {

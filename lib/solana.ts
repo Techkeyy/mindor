@@ -434,7 +434,8 @@ export async function executeLPPosition(
     // Pre-flight balance check
     const walletBalance = await getBalance(wallet.publicKey.toBase58())
     const REQUIRED_POSITION_RENT = 0.058 // SOL needed for position account creation
-    let requiredSOL = REQUIRED_POSITION_RENT
+    const TX_FEE_BUFFER = 0.002 // SOL buffer for transaction fees
+    let requiredSOL = REQUIRED_POSITION_RENT + TX_FEE_BUFFER
     if (mintForX === MINT_SOL) requiredSOL += amountX
     if (mintForY === MINT_SOL) requiredSOL += amountY
     if (walletBalance < requiredSOL) {

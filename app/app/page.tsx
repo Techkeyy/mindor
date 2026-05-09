@@ -208,11 +208,14 @@ export default function AppPage() {
       setSimResult(result);
       setSelectedStrategy(0);
 
+      const best = result.strategies[0]
       msgCounter++;
       setMessages(prev => [...prev, {
         id: `a-${msgCounter}`,
         role: "assistant",
-        text: `Found ${result.strategies.length} strategies for $${intent.capitalUSD.toLocaleString()} - ${intent.riskProfile} risk. Best match: ${result.strategies[0]?.pool?.tokenA}/${result.strategies[0]?.pool?.tokenB} on ${result.strategies[0]?.pool?.protocol} at ${result.strategies[0]?.pool?.feeApr?.toFixed(1)}% APR.`,
+        text: best
+          ? `Found ${result.strategies.length} strategies for $${intent.capitalUSD.toLocaleString()} - ${intent.riskProfile} risk. Best match: ${best.pool?.tokenA ?? '?'}/${best.pool?.tokenB ?? '?'} on ${best.pool?.protocol ?? 'unknown'} at ${best.pool?.feeApr?.toFixed(1) ?? '?'}% APR.`
+          : `No strategies found for your criteria. Try adjusting your risk profile or capital amount.`,
         timestamp: new Date(),
       }]);
     } catch (err) {
@@ -254,7 +257,7 @@ export default function AppPage() {
       if (connectedWallet) {
         savePositionToStorage(connectedWallet, {
           ...newPosition,
-          address: txData.signature,
+          address: txData.positionAddress ?? txData.signature,
         });
       }
     }
