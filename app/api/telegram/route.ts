@@ -103,15 +103,53 @@ export async function POST(req: NextRequest) {
 
     // Handle /start with deep-link monitoring parameter
     if (text.startsWith('/start mon_')) {
-      const payload = text.slice('/start mon_'.length) // strip prefix — 11 chars
-      const parts = payload.split('_')
-      const positionAddress = parts[0]
-      const poolAddress = parts[1] || ''
-      const lowerBinId = parseInt(parts[2]) || 0
-      const upperBinId = parseInt(parts[3]) || 0
-
+      const positionAddress = text.slice('/start mon_'.length) // just the position address
+      
       if (positionAddress && positionAddress.length > 30) {
         try {
+          // Derive pool address, lowerBinId, and upperBinId from the position on-chain
+          let poolAddress = ''
+          let lowerBinId = 0
+          let upperBinId = 0
+          
+          try {
+            const { Connection, PublicKey } = await import('@solana/web3.js')
+            const conn = new Connection(
+              process.env.NEXT_PUBLIC_SOLANA_RPC ?? 'https://api.mainnet-beta.solana.com',
+              { commitment: 'confirmed' }
+            )
+            // Scan known Meteora pools to find which one contains this position
+            const KNOWN_POOLS = [
+              '5rCf1DM8LjKTw4YqhnoLcngyZYeNnQqztScTogYHAS6', // SOL/USDC
+              '9cQNX7kx5mGwMBGB8V3JVKB7WguwQSjB3ekjg1Z1s5Dm', // USDC/USDT
+              '2po1ynXQhLL2XJ2AxfyYjK9nGTUFCpc9sqny4x7BG9Av', // SOL/JTO
+            ]
+            for (const poolAddr of KNOWN_POOLS) {
+              try {
+                const DLMM = (await import('@meteora-ag/dlmm')).default
+                const pool = await DLMM.create(conn, new PublicKey(poolAddr))
+                const pos = await pool.getPosition(new PublicKey(positionAddress))
+                if (pos && pos.positionData) {
+                  poolAddress = poolAddr
+                  lowerBinId = pos.positionData.lowerBinId ?? 0
+                  upperBinId = pos.positionData.upperBinId ?? 0
+                  break
+                }
+              } catch { /* position not in this pool, try next */ }
+            }
+          } catch (e) {
+            console.warn('[telegram] could not derive pool data from position:', e)
+          }
+
+          if (!poolAddress) {
+            await sendMessage(chatId,
+              `❌ Could not find which pool this position belongs to.\n\n` +
+              `Make sure the position was created via Mindor on one of the supported pools.\n\n` +
+              `<a href="${BASE_URL}/app">Open Mindor →</a>`
+            )
+            return NextResponse.json({ ok: true })
+          }
+
           const monRes = await fetch(`${BASE_URL}/api/monitor`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
