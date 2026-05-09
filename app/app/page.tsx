@@ -237,16 +237,18 @@ export default function AppPage() {
 
     if (txData?.success && txData.signature) {
       const poolAddr = txData.poolAddress ?? strategy.pool.address;
+      const posAddr = txData.positionAddress ?? txData.signature;
+      const capital = simResult?.intent.capitalUSD ?? (strategy.pool.tvl > 0 ? strategy.pool.tvl / 100 : 0);
       const newPosition: Position = {
-        id: txData.signature,
+        id: posAddr,
         tokenA: strategy.pool.tokenA,
         tokenB: strategy.pool.tokenB,
         protocol: strategy.pool.protocol,
         feeApr: strategy.pool.feeApr,
         signature: txData.signature,
-        explorerUrl: txData.explorerUrl ?? "",
+        explorerUrl: `https://explorer.solana.com/address/${posAddr}`,
         timestamp: new Date(),
-        capitalUSD: simResult?.intent.capitalUSD ?? 0,
+        capitalUSD: capital,
         poolAddress: poolAddr,
         positionAddress: txData.positionAddress,
         lowerBinId: txData.lowerBinId,
@@ -257,7 +259,7 @@ export default function AppPage() {
       if (connectedWallet) {
         savePositionToStorage(connectedWallet, {
           ...newPosition,
-          address: txData.positionAddress ?? txData.signature,
+          address: posAddr,
         });
       }
     }

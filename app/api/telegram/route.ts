@@ -156,10 +156,10 @@ export async function POST(req: NextRequest) {
         `• <i>"1000 dollars medium risk"</i>\n\n` +
         `I'll find the best Solana LP pools for you. ⚡\n\n` +
         `<b>🔔 Position Monitoring:</b>\n` +
-        `After opening a position on the web app, ` +
-        `click 🔔 MONITOR and enter your chat ID: ` +
-        `<code>${chatId}</code>\n` +
-        `Or type /chatid to see it again.`
+        `Open a position on the web app, ` +
+        `then click 🔔 MONITOR — I'll auto-register ` +
+        `alerts for bin exits and fee accumulation.\n\n` +
+        `<a href="${BASE_URL}/app">Open Mindor →</a>`
       )
       return NextResponse.json({ ok: true })
     }
@@ -239,9 +239,9 @@ export async function POST(req: NextRequest) {
         `• "aggressive yield 10k"\n` +
         `• "2000 dollars balanced approach"\n\n` +
         `<b>🔔 Monitoring:</b>\n` +
-        `After opening a position on the web app, ` +
-        `click 🔔 MONITOR and enter your chat ID, ` +
-        `or use /monitor command here directly.\n` +
+        `Open a position on the web app and click ` +
+        `🔔 MONITOR — I'll auto-register alerts for ` +
+        `bin exits and fee accumulation. No chat ID needed.\n` +
         `<a href="${BASE_URL}/app">Open Mindor →</a>`
       )
       return NextResponse.json({ ok: true })
