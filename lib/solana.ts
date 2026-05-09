@@ -37,6 +37,7 @@ export type ExecutionResult = {
   upperBinId?: number
   tokenA?: string
   tokenB?: string
+  depositedValueUSD?: number
 }
 
 // Token mint addresses on Solana mainnet
@@ -486,6 +487,9 @@ export async function executeLPPosition(
     })
     console.log('[mindor] SUCCESS:', sig)
 
+    // Calculate actual deposited USD value from real amounts and live prices
+    const depositedValueUSD = Math.round((amountX * priceX + amountY * priceY) * 100) / 100
+
     return {
       success: true,
       signature: sig,
@@ -494,6 +498,7 @@ export async function executeLPPosition(
       positionAddress: positionKeypair.publicKey.toBase58(),
       lowerBinId: minBinId,
       upperBinId: maxBinId,
+      depositedValueUSD,
     }
   } catch (err: any) {
     const msg = err?.message ?? String(err)

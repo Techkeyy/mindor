@@ -238,7 +238,7 @@ export default function AppPage() {
     if (txData?.success && txData.signature) {
       const poolAddr = txData.poolAddress ?? strategy.pool.address;
       const posAddr = txData.positionAddress ?? txData.signature;
-      const capital = simResult?.intent.capitalUSD ?? (strategy.pool.tvl > 0 ? strategy.pool.tvl / 100 : 0);
+      const capital = txData.depositedValueUSD ?? simResult?.intent.capitalUSD ?? 0;
       const newPosition: Position = {
         id: posAddr,
         tokenA: strategy.pool.tokenA,
