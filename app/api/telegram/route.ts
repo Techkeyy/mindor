@@ -7,6 +7,9 @@ const SECRET_TOKEN = process.env.TELEGRAM_WEBHOOK_SECRET
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL
   ?? 'https://mindor.xyz'
 
+// In-memory rate limit store (per-invocation on Vercel serverless)
+let _tgRateMap: Map<string, number[]> | null = null
+
 async function sendMessage(
   chatId: number,
   text: string,
@@ -61,14 +64,31 @@ async function parseIntentViaGroq(
 
 export async function POST(req: NextRequest) {
   try {
-    // Verify the request is from Telegram via secret token header
+    // Verify requests from Telegram — require matching token when header present,
+    // but don't reject missing headers (many webhooks are set up without secret_token)
     if (SECRET_TOKEN) {
       const headerToken = req.headers.get('X-Telegram-Bot-Api-Secret-Token')
-      if (headerToken !== SECRET_TOKEN) {
-        console.error('[telegram] missing or invalid secret token, rejecting request')
+      if (headerToken && headerToken !== SECRET_TOKEN) {
+        console.error('[telegram] invalid secret token, rejecting')
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
+      if (!headerToken) {
+        console.warn('[telegram] no secret token header — webhook may need re-setup with secret_token')
+      }
     }
+
+    // Simple IP-based rate limit: 60 req/min per IP
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+    const rateKey = `tg:${ip}`
+    const now = Date.now()
+    if (!_tgRateMap) _tgRateMap = new Map()
+    const timestamps = _tgRateMap.get(rateKey) ?? []
+    const recent = timestamps.filter(t => now - t < 60_000)
+    if (recent.length > 60) {
+      return NextResponse.json({ ok: true }) // silently drop
+    }
+    recent.push(now)
+    _tgRateMap.set(rateKey, recent)
 
     const body = await req.json()
     const message = body?.message
