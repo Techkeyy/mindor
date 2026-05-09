@@ -300,10 +300,23 @@ export default function AppPage() {
   };
 
   const handleMonitor = async (position: Position) => {
-    // Build deep-link: opens @mindorr_bot with position data auto-filled
+    // Ensure we have a valid pool address — fall back to known pools by token pair
+    const resolvePoolAddress = (): string => {
+      if (position.poolAddress && position.poolAddress.length > 30) return position.poolAddress;
+      // Map token pair to known Meteora pool
+      const pair = [position.tokenA, position.tokenB].sort().join('/');
+      const KNOWN: Record<string, string> = {
+        'SOL/USDC': '5rCf1DM8LjKTw4YqhnoLcngyZYeNnQqztScTogYHAS6',
+        'USDC/USDT': '9cQNX7kx5mGwMBGB8V3JVKB7WguwQSjB3ekjg1Z1s5Dm',
+        'JTO/SOL': '2po1ynXQhLL2XJ2AxfyYjK9nGTUFCpc9sqny4x7BG9Av',
+      };
+      return KNOWN[pair] ?? '';
+    };
+
+    const poolAddr = resolvePoolAddress();
     const data = [
       position.positionAddress ?? position.signature,
-      position.poolAddress ?? '',
+      poolAddr,
       position.lowerBinId ?? 0,
       position.upperBinId ?? 0,
     ].join('_')

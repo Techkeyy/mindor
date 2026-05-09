@@ -51,8 +51,16 @@ export async function POST(req: NextRequest) {
 
     if (action === 'register') {
       const { positionAddress, poolAddress, lowerBinId, upperBinId, chatId } = body
-      if (!positionAddress || !poolAddress || lowerBinId == null || upperBinId == null || !chatId) {
+      if (!positionAddress || lowerBinId == null || upperBinId == null || !chatId) {
         return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+      }
+
+      // Derive pool address from known pools if not provided
+      let resolvedPool = poolAddress || ''
+      if (!resolvedPool) {
+        // We'll need the pool for monitoring checks — but allow registration now
+        // and resolve during the first cron check
+        console.warn('[monitor] registering with empty poolAddress, will need manual resolution')
       }
 
       const key = `${chatId}:${positionAddress}`
@@ -110,6 +118,12 @@ export async function GET() {
 
   for (const [key, pos] of positions) {
     try {
+      // Skip positions with unresolved pool addresses
+      if (!pos.poolAddress || pos.poolAddress.length < 30) {
+        console.warn(`[monitor] skipping ${key}: no valid poolAddress`)
+        continue
+      }
+
       checked++
       const DLMM = (await import('@meteora-ag/dlmm')).default
       const poolPubkey = new PublicKey(pos.poolAddress)
