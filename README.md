@@ -1,43 +1,55 @@
-# Mindor — Intent to Execution
+# Mindor
 
-> AI-powered DeFi LP simulation and execution on Solana.
-> Describe your yield goal in plain English — Mindor simulates,
-> then executes a real LP position on-chain.
+> Natural language → Solana LP execution → Monitor. Type what you want. Click execute. Get alerts.
 
-**Live:** https://mindor-seven.vercel.app  
-**Telegram:** https://t.me/mindorr_bot  
-**Hackathon:** 100xDevs Frontier Track · Colosseum Solana Frontier
+[![Deploy](https://img.shields.io/badge/vercel-deployed-black)](https://mindor-seven.vercel.app)
+[![Solana](https://img.shields.io/badge/Solana-mainnet-blue)](https://explorer.solana.com)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 ---
 
-## What It Does
+## The Problem
+
+95% of people who know about DeFi have never provided liquidity. Not because they don't want the 28%+ APR — because the barrier is insane:
+
+- Research which pools exist across 5+ DEXes
+- Understand impermanent loss math for each pool type
+- Configure bin ranges correctly (Meteora DLMM)
+- Calculate gas, rent, and deposit splits manually
+- Monitor positions post-execution so they don't exit range
+
+Most people give up at step one. Mindor collapses all of this into a single sentence.
+
+---
+
+## What Mindor Does
 
 ```
-"$2k, low risk, stable yield"  →  Pools found  →  Simulated  →  Executed on-chain
-          (DeepSeek)               (DefiLlama)    (IL + fees)    (Meteora DLMM)
+You: "$2 high yield"
+Mindor: 3 strategies found. SOL/USDC on Meteora at 28.4% APR. Execute?
+You: Click. Sign in Phantom.
+Mindor: Position opened. Monitoring enabled. P&L tracking live.
 ```
 
-1. **Intent Parsing** — DeepSeek extracts capital, risk, and duration from natural language
-2. **Pool Discovery** — DefiLlama API finds the best Meteora DLMM pools on Solana
-3. **Simulation** — Fee projections (1D/7D/30D/1Y) + impermanent loss scenarios + net PnL
-4. **On-Chain Execution** — Opens a real LP position via Phantom wallet + Meteora DLMM
-5. **P&L Dashboard** — Live position tracking with current value, unclaimed fees, ROI
+**Three stages, one product:**
+
+| Stage | What happens |
+|---|---|
+| **Intent → Simulation** | Parses natural language, fetches live DefiLlama pools, ranks strategies by fee APR and IL risk |
+| **Execute** | Opens real Meteora DLMM positions on Solana mainnet via Phantom wallet |
+| **Monitor** | Tracks bin ranges, sends Telegram alerts for exit risk and fee accumulation |
 
 ---
 
 ## Features
 
-- **Natural Language Intent** — "I want safe yield on $5K" → executes on-chain
-- **Live Pool Data** — Real-time Meteora DLMM pools from DefiLlama (SOL-USDC, USDC-USDT, SOL-JTO)
-- **Impermanent Loss Analysis** — IL scenarios at -50% to +50% price movement, with fee offset
-- **On-Chain Execution** — Opens LP positions on Solana mainnet via Phantom wallet + Meteora DLMM
-- **Position Dashboard** — Expandable cards showing current value, unclaimed fees, ROI %
-- **Fee Claiming** — Claim swap fees directly from your LP positions without closing them
-- **Multi-Pool Scanning** — Scans all supported Meteora pools for your positions
-- **Position Persistence** — Positions survive refreshes and reconnects (localStorage + on-chain)
-- **Portfolio Summary** — Total deposited, current value, fees earned, net P&L across all positions
-- **Mobile Responsive** — Panels stack vertically on small screens
-- **0% Platform Fees** — Mindor takes no cut. Revenue from Meteora referral program (future)
+- 🔮 **Natural language intent** — "$500 low risk" or "max yield 2k aggressive" — just type
+- 📊 **Live simulation** — DefiLlama pool data, Meteora DLMM fee APR, IL scenario analysis
+- ⚡ **On-chain execution** — Real `initializePositionAndAddLiquidityByStrategy` via Phantom
+- 💰 **P&L dashboard** — On-chain position value, unclaimed fees, ROI tracking
+- 🔔 **Position monitoring** — Telegram alerts when your LP nears exit range or fees accumulate
+- 🤖 **Telegram bot** — Full simulation engine accessible via @mindorr_bot
+- 📱 **Mobile-first PWA** — Works on desktop and phone, dark theme
 
 ---
 
@@ -45,58 +57,151 @@
 
 | Layer | Technology |
 |---|---|
-| Frontend | Next.js 16 (App Router), React, Framer Motion |
-| AI | DeepSeek API (deepseek-chat) |
-| Blockchain | Solana Web3.js, Meteora DLMM SDK, Phantom Wallet |
-| Data | DefiLlama API, CoinGecko API |
-| Styling | CSS-in-JS (inline), Recharts (IL charts) |
-| Deployment | Vercel |
-
----
-
-## Getting Started
-
-```bash
-pnpm install
-cp .env.example .env.local   # add your DEEPSEEK_API_KEY
-pnpm dev                      # http://localhost:3000
-```
-
-Required env vars:
-- `DEEPSEEK_API_KEY` — DeepSeek API key for intent parsing
-- `NEXT_PUBLIC_SOLANA_RPC` — (optional) Custom Solana RPC URL
-- `NEXT_PUBLIC_APP_URL` — (optional) Your deployment URL
-
----
-
-## Screenshots
-
-<!-- TODO: Add screenshots of the working product -->
-- Landing page
-- Intent terminal + simulation results
-- P&L dashboard with live positions
-- Execution flow (wallet connect → confirm → tx confirmed)
+| **Chain** | Solana mainnet |
+| **LP Protocol** | Meteora DLMM (`@meteora-ag/dlmm`) |
+| **Pool Discovery** | DefiLlama API |
+| **Intent Parsing** | DeepSeek API |
+| **Frontend** | Next.js 16 (App Router) + Framer Motion + Recharts |
+| **Backend** | Next.js API routes (Vercel serverless) |
+| **Wallet** | Phantom browser extension |
+| **Monitoring** | Vercel Cron Jobs + Telegram Bot API |
+| **Deployment** | Vercel |
 
 ---
 
 ## Architecture
 
 ```
-app/
-├── page.tsx              # Landing page
-├── app/page.tsx          # Main app (terminal + dashboard)
-├── api/
-│   ├── parse-intent/     # DeepSeek NLP → structured intent
-│   └── fetch-pools/      # DefiLlama → simulated strategies
-lib/
-├── solana.ts             # Wallet, DLMM execution, P&L, fee claiming
-├── defillama.ts          # Pool discovery, address lookup, IL classification
-└── simulation.ts         # Fee simulation, IL math, strategy ranking
-components/
-├── PositionsPanel.tsx    # P&L dashboard + portfolio summary
-├── SimulationResults.tsx # Strategy cards + IL chart
-├── ExecutionModal.tsx    # Wallet connect → confirm → execute flow
-├── ILChart.tsx           # Recharts area chart for IL scenarios
-└── StrategyCard.tsx      # Individual pool strategy card
+┌─────────────────────────────────────────────────────────────┐
+│                      Next.js Frontend (PWA)                  │
+│  Intent Terminal → Simulation Results → Execution Modal      │
+│  Positions Panel → P&L Dashboard → Monitor Button            │
+└────────────┬──────────────────────────┬─────────────────────┘
+             │                          │
+    ┌────────▼────────┐       ┌────────▼────────┐
+    │  /api/parse-intent │       │  /api/fetch-pools │
+    │  (DeepSeek NLP)    │       │  (DefiLlama API)  │
+    └───────────────────┘       └───────────────────┘
+             │                          │
+    ┌────────▼──────────────────────────▼─────────────────────┐
+    │                  /api/mindor/simulate                     │
+    │  Combines intent + pools → ranked strategies + IL math   │
+    └──────────────────────────────────────────────────────────┘
+             │
+    ┌────────▼────────┐       ┌────────────────────────────┐
+    │  Phantom Wallet  │       │  Meteora DLMM (on-chain)    │
+    │  (client-side)   │──────▶│  initializePosition         │
+    │                  │       │  addLiquidityByStrategy      │
+    └──────────────────┘       └────────────────────────────┘
+                                         │
+    ┌────────────────────────────────────▼───────────────────┐
+    │                  /api/monitor (cron)                     │
+    │  Checks active bin vs position range → Telegram alerts   │
+    │  Checks unclaimed fees → compound alerts                 │
+    └─────────────────────────────────────────────────────────┘
+                                         │
+                                  ┌──────▼──────┐
+                                  │  @mindorr_bot │
+                                  │  (Telegram)   │
+                                  └───────────────┘
 ```
 
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- pnpm
+- Phantom wallet browser extension
+- Telegram account (for monitoring alerts)
+
+### Local Development
+
+```bash
+git clone https://github.com/Techkeyy/mindor.git
+cd mindor
+pnpm install
+cp .env.local.example .env.local
+# Edit .env.local with your API keys
+pnpm dev
+```
+
+### Environment Variables
+
+```env
+# Required
+DEEPSEEK_API_KEY=sk-...              # DeepSeek API for intent parsing
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# Optional
+NEXT_PUBLIC_SOLANA_RPC=              # Custom RPC (defaults to public mainnet)
+TELEGRAM_BOT_TOKEN=                  # For Telegram bot + monitoring alerts
+TELEGRAM_WEBHOOK_SECRET=             # Webhook validation secret
+```
+
+### Deploy
+
+```bash
+vercel --prod
+```
+
+Set the same environment variables in your Vercel project dashboard.
+
+---
+
+## Commands
+
+### Web App
+
+| Action | How |
+|---|---|
+| Simulate | Type your intent (e.g., "$500 low risk") → Enter |
+| Execute | Click a strategy card → Connect Phantom → Confirm |
+| Monitor | Click 🔔 MONITOR on a position → Enter Telegram chat ID |
+| View P&L | Click a position → Expand → Click REFRESH P&L |
+| Claim Fees | Expand position → Click CLAIM |
+| Withdraw | Expand position → Click WITHDRAW |
+
+### Telegram Bot (@mindorr_bot)
+
+| Command | Description |
+|---|---|
+| `/start` | Welcome message + your chat ID |
+| `/help` | All commands |
+| `/chatid` | Show your chat ID for monitoring |
+| `/monitor [address] [pool] [lower] [upper]` | Register a position for alerts |
+| `$2 high yield` | Run a simulation |
+
+---
+
+## Monitoring Alerts
+
+After registering a position, you'll receive Telegram messages for:
+
+| Alert | Trigger |
+|---|---|
+| ⚠ **Exit warning** | Active bin within 2 bins of your position range |
+| ✅ **Safe return** | Price moves back into your range |
+| 💰 **Fees accumulated** | Unclaimed fees exceed $0.50 |
+
+Checks run daily via Vercel Cron (hourly on Pro plan). Trigger manually:
+```bash
+curl https://mindor-seven.vercel.app/api/monitor
+```
+
+---
+
+## Known Limitations
+
+- **IL estimates**: Uses constant-product AMM math. Meteora DLMM concentrated-liquidity bins have different IL characteristics. Treat IL numbers as directional only.
+- **Execution**: Meteora DLMM pools only (Orca coming soon). Spot strategy only (type 0).
+- **Monitoring**: Daily cron on Vercel Hobby plan. Upgrade to Pro for sub-hour checks.
+- **Chains**: Solana mainnet only.
+
+---
+
+## License
+
+MIT © Techkeyy
