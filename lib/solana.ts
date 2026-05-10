@@ -489,6 +489,7 @@ export async function executeLPPosition(
 
     // Calculate actual deposited USD value from real amounts and live prices
     const depositedValueUSD = Math.round((amountX * priceX + amountY * priceY) * 100) / 100
+    console.log('[mindor] depositedValueUSD:', depositedValueUSD, '= (', amountX, '*', priceX, '+', amountY, '*', priceY, ')')
 
     return {
       success: true,

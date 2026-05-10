@@ -239,7 +239,11 @@ export default function AppPage() {
     if (txData?.success && txData.signature) {
       const poolAddr = txData.poolAddress ?? strategy.pool.address;
       const posAddr = txData.positionAddress ?? txData.signature;
-      const capital = txData.depositedValueUSD ?? simResult?.intent.capitalUSD ?? 0;
+      const capital = (txData.depositedValueUSD && txData.depositedValueUSD > 0)
+        ? txData.depositedValueUSD
+        : (simResult?.intent?.capitalUSD && simResult.intent.capitalUSD > 0)
+          ? simResult.intent.capitalUSD
+          : 0;
       console.log('[handleExecute] creating position', { posAddr: posAddr.slice(0,8), poolAddr: poolAddr.slice(0,8), capital, simCapital: simResult?.intent.capitalUSD })
       const newPosition: Position = {
         id: posAddr,
