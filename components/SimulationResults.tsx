@@ -31,7 +31,7 @@ type SimulationResultsProps = {
   result: SimResult;
   selectedStrategy: number;
   onSelectStrategy: (i: number) => void;
-  onExecute: (strategy: StrategyCardType, txData?: ExecutionResult) => void;
+  onExecute: (strategy: StrategyCardType, txData?: ExecutionResult, fallbackCapital?: number) => void;
 };
 
 export default function SimulationResults({
@@ -129,7 +129,7 @@ export default function SimulationResults({
             capitalUSD={result.intent.capitalUSD}
             onClose={() => setShowModal(false)}
             onConfirm={(txData) => {
-              onExecute(result.strategies[selectedStrategy], txData);
+              onExecute(result.strategies[selectedStrategy], txData, result.intent.capitalUSD);
               setShowModal(false);
             }}
           />

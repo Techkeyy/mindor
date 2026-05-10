@@ -232,8 +232,8 @@ export default function AppPage() {
     }
   };
 
-  const handleExecute = async (strategy: StrategyCard, txData?: ExecutionResult) => {
-    console.log('[handleExecute] called', { success: txData?.success, sig: txData?.signature?.slice(0,8), posAddr: txData?.positionAddress?.slice(0,8), deposited: txData?.depositedValueUSD })
+  const handleExecute = async (strategy: StrategyCard, txData?: ExecutionResult, fallbackCapital?: number) => {
+    console.log('[handleExecute] called', { success: txData?.success, sig: txData?.signature?.slice(0,8), posAddr: txData?.positionAddress?.slice(0,8), deposited: txData?.depositedValueUSD, fallbackCapital })
     setExecuting(true);
 
     if (txData?.success && txData.signature) {
@@ -241,8 +241,8 @@ export default function AppPage() {
       const posAddr = txData.positionAddress ?? txData.signature;
       const capital = (txData.depositedValueUSD && txData.depositedValueUSD > 0)
         ? txData.depositedValueUSD
-        : (simResult?.intent?.capitalUSD && simResult.intent.capitalUSD > 0)
-          ? simResult.intent.capitalUSD
+        : (fallbackCapital && fallbackCapital > 0)
+          ? fallbackCapital
           : 0;
       console.log('[handleExecute] creating position', { posAddr: posAddr.slice(0,8), poolAddr: poolAddr.slice(0,8), capital, simCapital: simResult?.intent.capitalUSD })
       const newPosition: Position = {
@@ -271,6 +271,9 @@ export default function AppPage() {
           address: posAddr,
         });
       }
+
+      // Auto-refresh P&L immediately so user doesn't need to reconnect
+      setTimeout(() => handleRefreshPnl(newPosition), 500);
     }
 
     msgCounter++;

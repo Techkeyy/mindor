@@ -278,14 +278,16 @@ export async function fetchPositionPnL(
     const unclaimedFees = (unclaimedX * priceX) + (unclaimedY * priceY)
     const claimedFees = (claimedX * priceX) + (claimedY * priceY)
     const totalValue = currentValue + unclaimedFees + claimedFees
-    const pnl = totalValue - capitalUSD
-    const roi = capitalUSD > 0 ? (pnl / capitalUSD) * 100 : 0
+    // Use execution-time capital if available, otherwise compute from on-chain data
+    const depositedValue = capitalUSD > 0 ? capitalUSD : (depositedX * priceX) + (depositedY * priceY)
+    const pnl = totalValue - depositedValue
+    const roi = depositedValue > 0 ? (pnl / depositedValue) * 100 : 0
 
     return {
       currentValue,
       unclaimedFees,
       claimedFees,
-      depositedValue: capitalUSD,
+      depositedValue,
       pnl,
       roi,
       depositedX,
