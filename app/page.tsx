@@ -212,7 +212,7 @@ export default function Home() {
               <a href="https://t.me/mindorr_bot" style={{ color: 'inherit', textDecoration: 'none' }}>Telegram</a>
               <a href="#api" style={{ color: 'inherit', textDecoration: 'none' }}>Docs</a>
             </div>
-            <div style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>Built on Solana x DefiLlama x Groq AI</div>
+            <div style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>Built on Solana x DefiLlama x DeepSeek</div>
           </div>
           <div style={{ ...pageWidth, marginTop: '24px', color: 'var(--text-muted)' }}>Open simulation API - call it from your agent</div>
         </footer>
