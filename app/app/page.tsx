@@ -233,12 +233,14 @@ export default function AppPage() {
   };
 
   const handleExecute = async (strategy: StrategyCard, txData?: ExecutionResult) => {
+    console.log('[handleExecute] called', { success: txData?.success, sig: txData?.signature?.slice(0,8), posAddr: txData?.positionAddress?.slice(0,8), deposited: txData?.depositedValueUSD })
     setExecuting(true);
 
     if (txData?.success && txData.signature) {
       const poolAddr = txData.poolAddress ?? strategy.pool.address;
       const posAddr = txData.positionAddress ?? txData.signature;
       const capital = txData.depositedValueUSD ?? simResult?.intent.capitalUSD ?? 0;
+      console.log('[handleExecute] creating position', { posAddr: posAddr.slice(0,8), poolAddr: poolAddr.slice(0,8), capital, simCapital: simResult?.intent.capitalUSD })
       const newPosition: Position = {
         id: posAddr,
         tokenA: strategy.pool.tokenA,
@@ -254,7 +256,10 @@ export default function AppPage() {
         lowerBinId: txData.lowerBinId,
         upperBinId: txData.upperBinId,
       };
-      setPositions(prev => [newPosition, ...prev]);
+      setPositions(prev => {
+        console.log('[handleExecute] setPositions called, prev length:', prev.length, 'new id:', posAddr.slice(0,8))
+        return [newPosition, ...prev]
+      });
 
       if (connectedWallet) {
         savePositionToStorage(connectedWallet, {
