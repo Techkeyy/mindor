@@ -2,7 +2,6 @@
 
 > Type your yield goal. See the numbers. Execute on Solana.  
 
-[![Deploy](https://img.shields.io/badge/vercel-deployed-black)](https://mindor-seven.vercel.app)
 [![Chain](https://img.shields.io/badge/Solana-mainnet-blue)](https://explorer.solana.com)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
@@ -11,7 +10,7 @@
 ## The Problem
 
 DeFi LP pays 28%+ APR, yet 95% of people who know about it never deposit a cent.  
-They face five decisions before a single satoshi moves: which DEX, which pool, what bin range, how to split capital, and how to monitor the position so it does not exit range. Most people quit at step one.
+They face five decisions before a single lamport moves: which DEX, which pool, what bin range, how to split capital, and how to monitor the position so it does not exit range. Most people quit at step one.
 
 Existing tools answer *one* of these questions. None answers all five in sequence.
 
@@ -21,7 +20,7 @@ Existing tools answer *one* of these questions. None answers all five in sequenc
 
 Mindor reduces five decisions to one sentence. A user types `$2 high yield` and receives three ranked strategies with fee projections, impermanent loss scenarios, and one-click execution through Phantom. After execution, the position appears in a live P&L dashboard. A Telegram bot sends alerts when the position approaches its bin-range boundary or accumulates meaningful fees.
 
-No other Solana LP product connects natural-language intent to on-chain execution and automated monitoring in a single interface.
+We found no other Solana LP product that connects natural-language intent to on-chain execution and automated monitoring in a single interface.
 
 ---
 
@@ -31,7 +30,10 @@ The landing page and application dashboard run at [mindor-seven.vercel.app](http
 
 A Telegram bot mirrors the simulation engine at [@mindorr_bot](https://t.me/mindorr_bot).
 
-*Screenshots and recordings are not yet in the repository. See the deployed app for the current UI.*
+![Mindor logo](/public/logo.png)
+
+<!-- ADD: screen recording or GIF of the intent → simulation → execute flow -->
+<!-- Recommended tool: https://www.recordscreen.io or macOS Screenshot.app -->
 
 ---
 
@@ -205,7 +207,7 @@ The bot returns three ranked strategies with fee estimates. Click a position's M
 
 ### What was built
 
-A full-stack Solana DeFi product in ~48 hours: Next.js 16 frontend, five API routes, on-chain LP execution via Meteora DLMM SDK, Phantom wallet integration, P&L dashboard with on-chain position reading, Telegram bot with simulation engine and monitoring, and a marketing landing page.
+A full-stack Solana DeFi product in 438 hours: Next.js 16 frontend, five API routes, on-chain LP execution via Meteora DLMM SDK, Phantom wallet integration, P&L dashboard with on-chain position reading, Telegram bot with simulation engine and monitoring, and a marketing landing page.
 
 ### Key decisions under time pressure
 
@@ -239,9 +241,8 @@ A full-stack Solana DeFi product in ~48 hours: Next.js 16 frontend, five API rou
 
 This is a hackathon project. Issues and PRs tracking the roadmap items above are welcome. Before opening a PR:
 
-1. Read the audit checklist at `references/solana-dapp-audit-checklist.md` (in the `solana-defi-execution` skill bundle)
-2. Run `pnpm build` locally and verify zero new errors
-3. Test execution on Solana devnet before touching mainnet path
+1. Run `pnpm build` locally and verify zero new errors
+2. Test execution on Solana devnet before touching mainnet path
 
 ---
 
